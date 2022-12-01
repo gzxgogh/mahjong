@@ -112,27 +112,29 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []string) {
 	var grabTheCardArr []int
 	switch startGroupNum {
 	case 1:
-		startNum = 6
-		grabTheCardArr = []int{1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4}
+		grabTheCardArr = []int{1, 2, 3, 4}
 	case 2:
-		startNum = 6 + 28
-		grabTheCardArr = []int{2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1}
+		startNum = startNum + (28 * 1)
+		grabTheCardArr = []int{2, 3, 4, 1}
 	case 3:
-		startNum = 6 + (28 * 2)
-		grabTheCardArr = []int{3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2}
+		startNum = startNum + (28 * 2)
+		grabTheCardArr = []int{3, 4, 1, 2}
 	case 4:
-		startNum = 6 + (28 * 3)
-		grabTheCardArr = []int{4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3}
+		startNum = startNum + (28 * 3)
+		grabTheCardArr = []int{4, 1, 2, 3}
 	}
 	//重新排序，用户从第0个牌开始抓取即可
 	newCardsArr = append(newCardsArr, allCardsArr[startNum:]...)
 	newCardsArr = append(newCardsArr, allCardsArr[:startNum]...)
-	keyArr := make(map[int][]string)
+	keyPlayerCards := make(map[int][]string)
 	curNum := 0
-	for _, v := range grabTheCardArr {
-		for i := 0; i < 4; i++ {
-			keyArr[v] = append(keyArr[v], newCardsArr[curNum])
-			curNum++
+
+	for i := 0; i < 4; i++ { //每个人都能抓四次牌
+		for _, v := range grabTheCardArr { //抓牌的用户顺序
+			for j := 0; j < 4; j++ { //一次抓四张牌
+				keyPlayerCards[v] = append(keyPlayerCards[v], newCardsArr[curNum])
+				curNum++
+			}
 		}
 	}
 
@@ -140,10 +142,10 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []string) {
 	surplusCard = append(surplusCard, newCardsArr[curNum:]...)
 	gold := surplusCard[len(surplusCard)-1]
 
-	keyArr[startGroupNum] = append(keyArr[startGroupNum], surplusCard[0])
+	keyPlayerCards[startGroupNum] = append(keyPlayerCards[startGroupNum], surplusCard[0])
 	surplusCard = append(surplusCard[:0], surplusCard[(0+1):]...)
 
-	for k, arr := range keyArr {
+	for k, arr := range keyPlayerCards {
 		kInfo := make(map[string][]int)
 		for _, item := range arr {
 			if item == gold {
