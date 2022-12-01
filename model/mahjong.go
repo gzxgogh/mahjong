@@ -6,15 +6,14 @@ import (
 )
 
 //牌类型
-type CardType int
+type CardType string
 
 const (
-	CardType_Unknown CardType = iota
-	CardType_W                //万
-	CardType_T                //筒
-	CardType_S                //条
-	CardType_Z                //中
-	CardType_G                //金
+	CardType_W = "万" //万
+	CardType_T = "筒" //筒
+	CardType_S = "条" //条
+	CardType_Z = "中" //中
+	CardType_G = "金" //金
 
 )
 
@@ -39,7 +38,7 @@ func (st CardType) String() string {
 //牌定义
 type Card struct {
 	Value int
-	Type  CardType
+	Type  string
 }
 
 //实现string
