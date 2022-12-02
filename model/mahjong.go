@@ -55,3 +55,9 @@ func (sc SortCards) Sort() {
 		return sc[i].Value < sc[j].Value
 	})
 }
+
+type Result struct {
+	Player   string   `json:"player"`
+	Action   []string `json:"action"`
+	EatCards [][]Card `json:"eatCards"`
+}

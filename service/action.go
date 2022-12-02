@@ -6,7 +6,6 @@ import (
 	"mahjong/redis"
 	"mahjong/utils"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -166,12 +165,12 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 		}
 		fmt.Println("用户player", playerNum, "的手牌为:", utils.ToJSON(kInfo))
 		//存入用户手牌
-		//redis.SetValue(fmt.Sprintf(`%d-player%d`, roomNum, k), utils.ToJSON(kInfo), 1*time.Hour)
+		redis.SetValue(fmt.Sprintf(`%d-player%d`, roomNum, playerNum), utils.ToJSON(kInfo), 1*time.Hour)
 	}
 
 	//存入分配玩后各个玩家手里的牌，和场上现有的牌
-	//redis.SetValue(fmt.Sprintf(`%d-glod`, roomNum), gold, 1*time.Hour)
-	//redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCard), 1*time.Hour)
+	redis.SetValue(fmt.Sprintf(`%d-glod`, roomNum), gold, 1*time.Hour)
+	redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCardArr), 1*time.Hour)
 }
 
 //获取剩余牌堆的牌
@@ -190,15 +189,7 @@ func GetPlayerCardInfo(roomNum int, player string) map[string][]int {
 	return cardInfo
 }
 
-//抢金
-func robGold(goldCardType string, goldCardNum int, cardInfo map[string][]int) bool {
-
-	return false
-}
-
-//吃牌,只有下家可以吃牌
-func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]interface{} {
-	//确定下家是谁
+func GetNextPlayer(curPlayer string) string {
 	player := ""
 	switch curPlayer {
 	case "player1":
@@ -210,10 +201,19 @@ func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]inter
 	case "player4":
 		player = "player1"
 	}
-	cardInfo := GetPlayerCardInfo(roomNum, player)
+	return player
+}
 
+//抢金
+func robGold(goldCardType string, goldCardNum int, cardInfo map[string][]int) bool {
+
+	return false
+}
+
+//吃牌
+func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Card) {
 	var lessTwoCard, lessOneCard, greaterOneCard, greaterTwoCard int
-	result := make(map[string]interface{})
+	flag := false
 	var cardGroup []model.Card
 	switch curCard.Value {
 	case 1:
@@ -225,20 +225,16 @@ func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]inter
 			}
 		}
 		if greaterOneCard != 0 && greaterTwoCard != 0 {
-			cardGroup = []model.Card{
-				model.Card{
-					Type:  curCard.Type,
-					Value: 1,
-				},
-				model.Card{
-					Type:  curCard.Type,
-					Value: 2,
-				},
-				model.Card{
-					Type:  curCard.Type,
-					Value: 3,
-				},
-			}
+			flag = true
+			cardGroup = append(cardGroup, curCard)
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterOneCard,
+			})
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterTwoCard,
+			})
 		}
 	case 2:
 		for _, item := range cardInfo[curCard.Type] {
@@ -246,13 +242,33 @@ func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]inter
 				lessOneCard = item
 			} else if item == 3 {
 				greaterOneCard = item
+			} else if item == 4 {
+				greaterTwoCard = item
 			}
 		}
 		if lessOneCard != 0 && greaterOneCard != 0 {
-
+			flag = true
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessOneCard,
+			})
+			cardGroup = append(cardGroup, curCard)
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterOneCard,
+			})
 		}
-		if lessOneCard != 0 && lessTwoCard != 0 {
-
+		if greaterOneCard != 0 && greaterTwoCard != 0 {
+			flag = true
+			cardGroup = append(cardGroup, curCard)
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterOneCard,
+			})
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterTwoCard,
+			})
 		}
 	case 8:
 		for _, item := range cardInfo[curCard.Type] {
@@ -260,13 +276,33 @@ func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]inter
 				lessOneCard = item
 			} else if item == 9 {
 				greaterOneCard = item
+			} else if item == 6 {
+				lessTwoCard = item
 			}
 		}
 		if lessOneCard != 0 && greaterOneCard != 0 {
-
+			flag = true
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessOneCard,
+			})
+			cardGroup = append(cardGroup, curCard)
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterOneCard,
+			})
 		}
 		if lessOneCard != 0 && lessTwoCard != 0 {
-
+			flag = true
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessTwoCard,
+			})
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessOneCard,
+			})
+			cardGroup = append(cardGroup, curCard)
 		}
 	case 9:
 		for _, item := range cardInfo[curCard.Type] {
@@ -277,7 +313,15 @@ func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]inter
 			}
 		}
 		if lessOneCard != 0 && lessTwoCard != 0 {
-
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessTwoCard,
+			})
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessOneCard,
+			})
+			cardGroup = append(cardGroup, curCard)
 		}
 	default:
 		for _, item := range cardInfo[curCard.Type] {
@@ -291,40 +335,88 @@ func EatCard(roomNum int, curPlayer string, curCard model.Card) map[string]inter
 				greaterTwoCard = item
 			}
 		}
-	}
-	result[player] = map[string]interface{}{
-		"action":    []string{"eatCard"},
-		"cardGroup": cardGroup,
+		if lessTwoCard != 0 && lessOneCard != 0 {
+			flag = true
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessTwoCard,
+			})
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessOneCard,
+			})
+			cardGroup = append(cardGroup, curCard)
+		}
+		if lessOneCard != 0 && greaterOneCard != 0 {
+			flag = true
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: lessOneCard,
+			})
+			cardGroup = append(cardGroup, curCard)
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterOneCard,
+			})
+		}
+		if greaterOneCard != 0 && greaterTwoCard != 0 {
+			flag = true
+			cardGroup = append(cardGroup, curCard)
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterOneCard,
+			})
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: greaterTwoCard,
+			})
+		}
 	}
 
-	return result
+	total := len(cardGroup) / 3
+	var finalArr [][]model.Card
+	for i := 0; i < total; i++ {
+		var newArr []model.Card
+		for j := 0; j < 3; j++ {
+			if len(newArr) < 3 {
+				newArr = append(newArr, cardGroup[(i*3)+j])
+			}
+		}
+		finalArr = append(finalArr, newArr)
+	}
+	return flag, finalArr
 }
 
 //碰牌
-func TouchCard(roomNum int, curCard string) map[string][]string {
-	curCardType := curCard[1:]
-	curCardNum, _ := strconv.Atoi(curCard[:1])
-
-	result := make(map[string][]string)
-	for i := 1; i <= 4; i++ {
-		cardInfo := GetPlayerCardInfo(roomNum, fmt.Sprintf(`player%d`, i))
-		total := 0
-		for _, item := range cardInfo[curCardType] {
-			if curCardNum == item {
-				total++
-			}
-		}
-		if total == 2 {
-			key := fmt.Sprintf(`player%d`, i)
-			result[key] = append(result[key], "touchCard")
-			break
+func touchCard(curCard model.Card, cardInfo map[string][]int) bool {
+	total := 0
+	for _, item := range cardInfo[curCard.Type] {
+		if curCard.Value == item {
+			total++
 		}
 	}
-	return result
+	if total == 2 {
+		return true
+	}
+	return false
+}
+
+//杠牌
+func barCard(curCard model.Card, cardInfo map[string][]int) bool {
+	total := 0
+	for _, item := range cardInfo[curCard.Type] {
+		if curCard.Value == item {
+			total++
+		}
+	}
+	if total == 3 {
+		return true
+	}
+	return false
 }
 
 //抓一张牌
-func GrabOneCard(roomNum int, curPlayer string) {
+func GrabOneCard(roomNum int, curPlayer string) model.Result {
 	surplusCard := GetSurplusCard(roomNum)
 	curCard := surplusCard[0]
 
@@ -332,37 +424,77 @@ func GrabOneCard(roomNum int, curPlayer string) {
 	curCardTypeArr := cardInfo[curCard.Type]
 	curCardTypeArr = append(curCardTypeArr, curCard.Value)
 	sort.Ints(curCardTypeArr)
-
 	cardInfo[curCard.Type] = curCardTypeArr
-	//todo 判断当前用户是否可以胡牌,不行重新存入剩余的牌堆
 
+	var result model.Result
+	result.Player = curPlayer
+	var actionArr []string
+	if huCard(cardInfo) {
+		actionArr = append(actionArr, "huCard")
+	}
+	if barCard(curCard, cardInfo) {
+		actionArr = append(actionArr, "barCard")
+	}
+	result.Action = actionArr
 	surplusCard = append(surplusCard[:0], surplusCard[1:]...)
 	key := fmt.Sprintf(`%d-surplusCard`, roomNum)
 	redis.DelKey(key)
 	redis.SetValue(key, utils.ToJSON(surplusCard), time.Hour)
+
+	return result
 }
 
 //出一张手牌
-func PlayOneCard(roomNum int, curCard, curPlayer string) {
+func PlayOneCard(roomNum int, curPlayer string, curCard model.Card) []model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
 
-	curCardType := curCard[1:]
-	curCardNum, _ := strconv.Atoi(curCard[:1])
-
-	arr := cardInfo[curCardType]
+	arr := cardInfo[curCard.Type]
 	for i, item := range arr {
-		if curCardNum == item {
+		if curCard.Value == item {
 			arr = append(arr[:i], arr[i+1:]...)
 		}
 	}
-	cardInfo[curCardType] = arr
-	//todo 判断除该用户外其他用户是否可以胡牌，碰牌，下家胡牌
+	cardInfo[curCard.Type] = arr
 
+	//判断其他用户如果获取到该牌是否能胡牌
+	resList := make([]model.Result, 3)
+	nextPlayer := ""
+	for i := 0; i < 3; i++ {
+		var res model.Result
+		nextPlayer = GetNextPlayer(curPlayer)
+		res.Player = nextPlayer
+
+		nextCardInfo := GetPlayerCardInfo(roomNum, nextPlayer)
+		arr := append(nextCardInfo[curCard.Type], curCard.Value)
+		sort.Ints(arr)
+		nextCardInfo[curCard.Type] = arr
+
+		var actionArr []string
+		if huCard(nextCardInfo) {
+			actionArr = append(actionArr, "huCard")
+		}
+		if barCard(curCard, nextCardInfo) {
+			actionArr = append(actionArr, "barCard")
+		}
+		if touchCard(curCard, nextCardInfo) {
+			actionArr = append(actionArr, "touchCard")
+		}
+		if i == 0 {
+			flag, eatCards := eatCard(curCard, nextCardInfo)
+			if flag {
+				actionArr = append(actionArr, "eatCard")
+				res.EatCards = eatCards
+			}
+		}
+		res.Action = actionArr
+		resList = append(resList, res)
+		curPlayer = nextPlayer
+	}
+	return resList
 }
 
 //胡牌
-func HuCard(roomNum int, curPlayer string) bool {
-	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
+func huCard(cardInfo map[string][]int) bool {
 	goldNum := len(cardInfo["金"])
 	if goldNum == 3 {
 		return true
@@ -374,7 +506,7 @@ func HuCard(roomNum int, curPlayer string) bool {
 		for _, card := range arr {
 			cardsNum[card]++
 		}
-		isHu := ComputeCards(cardsNum, pairNum, goldNum)
+		isHu := computeCards(cardsNum, pairNum, goldNum)
 		if !isHu {
 			return false
 		}
@@ -393,7 +525,7 @@ func HuCard(roomNum int, curPlayer string) bool {
 	在回来减去两个 3 剩下 334567 ，在减去345剩下367不能胡；
 	在回来到下面减一个345 剩33367，减去333 剩下67 ，这里和第一次其实是一样的算法，只是顺序不同。
 */
-func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
+func computeCards(cardsNum []int, pairNum, goldNum int) bool {
 	cnt := 0
 	for _, num := range cardsNum {
 		if num > 0 {
@@ -413,7 +545,7 @@ func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
 			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
 			//减掉后再传入SplitCards
 			cardsNum[i] -= 3
-			if ComputeCards(cardsNum, pairNum, goldNum) {
+			if computeCards(cardsNum, pairNum, goldNum) {
 				return true
 			}
 			cardsNum[i] += 3
@@ -423,7 +555,7 @@ func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
 			if pairNum == 0 {
 				pairNum++
 				cardsNum[i] -= 2
-				if ComputeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i] += 2
@@ -434,7 +566,7 @@ func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
 			if pairNum > 0 && goldNum > 0 {
 				cardsNum[i] -= 2
 				goldNum--
-				if ComputeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i] += 2
@@ -446,7 +578,7 @@ func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
 				cardsNum[i]--
 				cardsNum[i+1]--
 				cardsNum[i+2]--
-				if ComputeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
@@ -458,7 +590,7 @@ func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
 				cardsNum[i]--
 				cardsNum[i+1]--
 				goldNum--
-				if ComputeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
@@ -469,7 +601,7 @@ func ComputeCards(cardsNum []int, pairNum, goldNum int) bool {
 				cardsNum[i]--
 				cardsNum[i+2]--
 				goldNum--
-				if ComputeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
