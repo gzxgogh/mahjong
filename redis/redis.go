@@ -20,6 +20,7 @@ func InItRedisCoon() {
 }
 
 func SetValue(key, value string, expiration time.Duration) {
+	DB.Del(key)
 	DB.Set(key, value, expiration)
 }
 
