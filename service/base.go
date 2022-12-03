@@ -337,8 +337,8 @@ func touchCard(curCard model.Card, cardInfo map[string][]int) bool {
 	return false
 }
 
-//杠牌
-func barCard(curCard model.Card, cardInfo map[string][]int) bool {
+//明杠
+func rightBarCard(curCard model.Card, cardInfo map[string][]int) bool {
 	total := 0
 	for _, item := range cardInfo[curCard.Type] {
 		if curCard.Value == item {
@@ -349,6 +349,30 @@ func barCard(curCard model.Card, cardInfo map[string][]int) bool {
 		return true
 	}
 	return false
+}
+
+//暗杠
+func barkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
+	var finalArr [][]model.Card
+	for typ, arr := range cardInfo {
+		var cardGroup []model.Card
+		for _, item := range arr {
+			if len(cardGroup) == 0 {
+				cardGroup = append(cardGroup, model.Card{
+					Type:  typ,
+					Value: item,
+				})
+			} else if len(cardGroup) == 4 {
+				finalArr = append(finalArr, cardGroup)
+			} else {
+				if item != cardGroup[0].Value {
+					cardGroup = []model.Card{}
+				}
+			}
+		}
+	}
+
+	return false, finalArr
 }
 
 //胡牌

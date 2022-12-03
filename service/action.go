@@ -91,7 +91,7 @@ func (ac Action) GetGoldCard(roomNum int) string {
 func (ac Action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	surplusCard := GetSurplusCard(roomNum)
 	curCard := surplusCard[0]
-
+	fmt.Println("摸到的牌为：", curCard)
 	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
 	curCardTypeArr := cardInfo[curCard.Type]
 	curCardTypeArr = append(curCardTypeArr, curCard.Value)
@@ -104,14 +104,17 @@ func (ac Action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	if huCard(cardInfo) {
 		actionArr = append(actionArr, "huCard")
 	}
-	if barCard(curCard, cardInfo) {
+	flag, cardGroup := barkBarCard(cardInfo)
+	if flag {
 		actionArr = append(actionArr, "barCard")
+		fmt.Println(cardGroup)
 	}
+
 	result.Action = actionArr
 	surplusCard = append(surplusCard[:0], surplusCard[1:]...)
 	key := fmt.Sprintf(`%d-surplusCard`, roomNum)
-	redis.DelKey(key)
 	redis.SetValue(key, utils.ToJSON(surplusCard), time.Hour)
+	redis.SetValue(fmt.Sprintf("%d-%s", roomNum, curPlayer), utils.ToJSON(cardInfo), time.Hour)
 
 	return result
 }
@@ -154,7 +157,7 @@ func (ac Action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) 
 		if huCard(nextCardInfo) {
 			actionArr = append(actionArr, "huCard")
 		}
-		if barCard(curCard, nextCardInfo) {
+		if rightBarCard(curCard, nextCardInfo) {
 			actionArr = append(actionArr, "barCard")
 		}
 		if touchCard(curCard, nextCardInfo) {
@@ -191,16 +194,20 @@ func (ac Action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Card
 		}
 	}
 
-	var newArr []int
-	for _, item := range arr {
-		if item == a || item == b || item == curCard.Value {
-			continue
+	for i, item := range arr {
+		if item == a {
+			arr = append(arr[:i], arr[i+1:]...)
 		}
-		newArr = append(newArr, item)
 	}
-	cardInfo[curCard.Type] = newArr
+	for i, item := range arr {
+		if item == b {
+			arr = append(arr[:i], arr[i+1:]...)
+		}
+	}
+
+	cardInfo[curCard.Type] = arr
 	key := fmt.Sprintf(`%d-%s`, roomNum, player)
-	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Second)
+	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 
 	return
 }
@@ -221,7 +228,9 @@ func (ac Action) TouchCard(roomNum int, curCard model.Card, player string) {
 	cardInfo[curCard.Type] = newArr
 
 	key := fmt.Sprintf(`%d-%s`, roomNum, player)
-	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Second)
+	fmt.Println("key", key)
+	fmt.Println("cardInfo", cardInfo)
+	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 }
 
 //杠牌
