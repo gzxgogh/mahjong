@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-
+	//todo 明杠和暗杠也有杠牌组
 	redis.InItRedisCoon()
 	//service.Action{}.ShuffleCards(1001, 3, "player1")
 
