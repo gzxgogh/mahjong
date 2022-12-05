@@ -60,4 +60,5 @@ type Result struct {
 	Player   string   `json:"player"`
 	Action   []string `json:"action"`
 	EatCards [][]Card `json:"eatCards"`
+	BarCards [][]Card `json:"barCards"`
 }

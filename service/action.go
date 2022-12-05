@@ -101,13 +101,13 @@ func (ac Action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	var result model.Result
 	result.Player = curPlayer
 	var actionArr []string
-	if huCard(cardInfo) {
+	if ziMoCard(cardInfo) {
 		actionArr = append(actionArr, "huCard")
 	}
 	flag, cardGroup := barkBarCard(cardInfo)
 	if flag {
 		actionArr = append(actionArr, "barCard")
-		fmt.Println(cardGroup)
+		result.BarCards = cardGroup
 	}
 
 	result.Action = actionArr
@@ -154,11 +154,13 @@ func (ac Action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) 
 		nextCardInfo := GetPlayerCardInfo(roomNum, nextPlayer)
 
 		var actionArr []string
-		if huCard(nextCardInfo) {
+		if huCard(curCard, nextCardInfo) {
 			actionArr = append(actionArr, "huCard")
 		}
-		if rightBarCard(curCard, nextCardInfo) {
+		flag, cardGroup := rightBarCard(curCard, nextCardInfo)
+		if flag {
 			actionArr = append(actionArr, "barCard")
+			res.BarCards = cardGroup
 		}
 		if touchCard(curCard, nextCardInfo) {
 			actionArr = append(actionArr, "touchCard")
@@ -219,7 +221,7 @@ func (ac Action) TouchCard(roomNum int, curCard model.Card, player string) {
 	var newArr []int
 	total := 0
 	for _, item := range arr {
-		if item == curCard.Value && item <= 2 {
+		if item == curCard.Value && total <= 2 {
 			total++
 			continue
 		}
@@ -255,8 +257,13 @@ func (ac Action) BarCard(roomNum int, curCard model.Card, player string) model.R
 	surplusCardArr := GetSurplusCard(roomNum)
 	length := len(surplusCardArr)
 	newCard := surplusCardArr[length-1]
-	cardInfo[newCard.Type] = append(cardInfo[newCard.Type], newCard.Value)
-	if huCard(cardInfo) {
+
+	caryTypeArr := cardInfo[newCard.Type]
+	caryTypeArr = append(caryTypeArr, newCard.Value)
+	sort.Ints(caryTypeArr)
+	cardInfo[newCard.Type] = caryTypeArr
+
+	if ziMoCard(cardInfo) {
 		res.Action = []string{"huCard"}
 	}
 	//扣减牌数，重进记录

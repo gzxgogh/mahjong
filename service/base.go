@@ -140,7 +140,7 @@ func GetNextPlayer(curPlayer string) string {
 //抢金
 func robGold(cardInfo map[string][]int) bool {
 	cardInfo[model.CardType_G] = append(cardInfo[model.CardType_G], 1)
-	if huCard(cardInfo) {
+	if ziMoCard(cardInfo) {
 		return true
 	}
 	return false
@@ -338,7 +338,7 @@ func touchCard(curCard model.Card, cardInfo map[string][]int) bool {
 }
 
 //明杠
-func rightBarCard(curCard model.Card, cardInfo map[string][]int) bool {
+func rightBarCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Card) {
 	total := 0
 	for _, item := range cardInfo[curCard.Type] {
 		if curCard.Value == item {
@@ -346,9 +346,17 @@ func rightBarCard(curCard model.Card, cardInfo map[string][]int) bool {
 		}
 	}
 	if total == 3 {
-		return true
+		cardGroup := []model.Card{
+			{Type: curCard.Type, Value: curCard.Value},
+			{Type: curCard.Type, Value: curCard.Value},
+			{Type: curCard.Type, Value: curCard.Value},
+			{Type: curCard.Type, Value: curCard.Value},
+		}
+		var finalCards [][]model.Card
+		finalCards = append(finalCards, cardGroup)
+		return true, finalCards
 	}
-	return false
+	return false, nil
 }
 
 //暗杠
@@ -374,15 +382,44 @@ func barkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
 
 	return false, finalArr
 }
-
-//胡牌
-func huCard(cardInfo map[string][]int) bool {
+func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 	goldNum := len(cardInfo["金"])
 	if goldNum == 3 {
 		return true
 	}
 	pairNum := 0
-	for _, arr := range cardInfo {
+	for typ, arr := range cardInfo {
+		if typ == model.CardType_G {
+			continue
+		}
+		//1-9 每张牌的数量
+		if typ == curCard.Type {
+			arr = append(arr, curCard.Value)
+			sort.Ints(arr)
+		}
+		cardsNum := make([]int, 10)
+		for _, card := range arr {
+			cardsNum[card]++
+		}
+		isHu := computeCards(cardsNum, pairNum, goldNum)
+		if !isHu {
+			return false
+		}
+	}
+	return true
+}
+
+//自摸
+func ziMoCard(cardInfo map[string][]int) bool {
+	goldNum := len(cardInfo["金"])
+	if goldNum == 3 {
+		return true
+	}
+	pairNum := 0
+	for typ, arr := range cardInfo {
+		if typ == model.CardType_G {
+			continue
+		}
 		//1-9 每张牌的数量
 		cardsNum := make([]int, 10)
 		for _, card := range arr {
