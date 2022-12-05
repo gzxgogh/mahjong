@@ -2,10 +2,27 @@ package utils
 
 import (
 	"encoding/json"
+	"mahjong/model"
 	"math/rand"
 	"strings"
 	"time"
 )
+
+func Error(code int, msg string) model.Result {
+	return model.Result{
+		Status: code,
+		Msg:    msg,
+		Data:   nil,
+	}
+}
+
+func Success(data interface{}) model.Result {
+	return model.Result{
+		Status: 200,
+		Msg:    "success",
+		Data:   data,
+	}
+}
 
 func GetRandomWithAll(min, max int) int64 {
 	rand.Seed(time.Now().UnixNano())

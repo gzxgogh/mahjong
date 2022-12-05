@@ -1,37 +1,45 @@
 package main
 
 import (
-	"fmt"
-	"mahjong/model"
+	"context"
+	"log"
 	"mahjong/redis"
-	"mahjong/service"
-	"mahjong/utils"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
+
 	redis.InItRedisCoon()
-	//service.Action{}.ShuffleCards(1001, 3, "player1")
+	engine := setupRouter()
 
-	//出牌
-	result := service.Action{}.PlayOneCard(1001, "player3", model.Card{
-		Type:  model.CardType_W,
-		Value: 7,
-	})
+	server := &http.Server{
+		Addr:    ":8011",
+		Handler: engine,
+	}
 
-	//摸排
-	//result := service.Action{}.GrabOneCard(1001, "player3")
+	go func() {
+		var err error
+		err = server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Println("HTTP server listen: {}", err.Error())
+		}
+	}()
 
-	//碰排
-	//service.Action{}.TouchCard(1001,model.Card{Type: model.CardType_W, Value:7},"player1")
+	// 等待中断信号以优雅地关闭服务器（设置 5 秒的超时时间）
+	signalChan := make(chan os.Signal)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
+	sig := <-signalChan
+	log.Println("Get Signal:" + sig.String())
+	log.Println("Shutdown Server ...")
 
-	//吃排
-	//cardGroup :=[]model.Card{
-	//	{Type: model.CardType_W, Value: 3},
-	//	{Type: model.CardType_W, Value: 4},
-	//	{Type: model.CardType_W, Value: 5},
-	//}
-	//fmt.Println(cardGroup)
-	//service.Action{}.EatCard(1001,model.Card{Type: model.CardType_W, Value: 5}, cardGroup,"player2")
-
-	fmt.Println(utils.ToJSON(result))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Println("Server Shutdown:" + err.Error())
+	}
+	log.Println("Server exiting")
 }

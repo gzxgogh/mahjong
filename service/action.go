@@ -9,10 +9,12 @@ import (
 	"time"
 )
 
-type Action struct{}
+type action struct{}
+
+var Action *action
 
 //摇骰子
-func (ac Action) Dice() int64 {
+func (ac *action) Dice() int64 {
 	a := utils.GetRandomWithAll(1, 6)
 	b := utils.GetRandomWithAll(1, 6)
 	sum := a + b
@@ -20,7 +22,7 @@ func (ac Action) Dice() int64 {
 }
 
 //洗牌分牌
-func (ac Action) ShuffleCards(roomNum, diceNum int, player string) {
+func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result {
 	var totalCardsArr, finalCardsArr []model.Card
 	typeArr := []string{model.CardType_W, model.CardType_T, model.CardType_S}
 	for _, item := range typeArr {
@@ -45,24 +47,6 @@ func (ac Action) ShuffleCards(roomNum, diceNum int, player string) {
 		totalCardsArr = append(totalCardsArr[:randomNum], totalCardsArr[(randomNum+1):]...)
 	}
 
-	/*var groupA, groupB, groupC, groupD []model.Card
-	for i, item := range finalCardsArr {
-		if i < 28 {
-			groupA = append(groupA, item)
-		} else if i >= 28 && i < 56 {
-			groupB = append(groupB, item)
-		} else if i >= 56 && i < 84 {
-			groupC = append(groupC, item)
-		} else if i >= 84 && i < 112 {
-			groupD = append(groupD, item)
-		}
-	}
-	fmt.Println("用户1面前的牌堆", groupA)
-	fmt.Println("用户2面前的牌堆", groupB)
-	fmt.Println("用户3面前的牌堆", groupC)
-	fmt.Println("用户4面前的牌堆", groupD)
-	*/
-
 	//确定是那个用户摇的骰子，并且更具点数开始抓牌
 	var startGroupNum, startNum int
 	switch player {
@@ -77,18 +61,18 @@ func (ac Action) ShuffleCards(roomNum, diceNum int, player string) {
 	}
 	startNum = diceNum * 2
 
-	fmt.Println("从", startGroupNum, "个用户牌堆的第", startNum+1, "开始抓牌")
 	GrabTheCard(roomNum, startGroupNum, startNum, finalCardsArr)
+	return utils.Success(nil)
 }
 
 //获取该局的金
-func (ac Action) GetGoldCard(roomNum int) string {
+func (ac *action) GetGoldCard(roomNum int) model.Result {
 	gold := redis.GetValue(fmt.Sprintf(`%d-glod`, roomNum))
-	return gold
+	return utils.Success(gold)
 }
 
 //抓一张牌
-func (ac Action) GrabOneCard(roomNum int, curPlayer string) model.Result {
+func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	surplusCard := GetSurplusCard(roomNum)
 	curCard := surplusCard[0]
 	fmt.Println("摸到的牌为：", curCard)
@@ -98,8 +82,9 @@ func (ac Action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	sort.Ints(curCardTypeArr)
 	cardInfo[curCard.Type] = curCardTypeArr
 
-	var result model.Result
+	var result model.Action
 	result.Player = curPlayer
+	result.GardCard = &curCard
 	var actionArr []string
 	if ziMoCard(cardInfo) {
 		actionArr = append(actionArr, "ziMo")
@@ -116,11 +101,11 @@ func (ac Action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	redis.SetValue(key, utils.ToJSON(surplusCard), time.Hour)
 	redis.SetValue(fmt.Sprintf("%d-%s", roomNum, curPlayer), utils.ToJSON(cardInfo), time.Hour)
 
-	return result
+	return utils.Success(result)
 }
 
 //出一张手牌
-func (ac Action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) []model.Result {
+func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) model.Result {
 	key := fmt.Sprintf("%d-%s", roomNum, curPlayer)
 	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
 	curCardArr := cardInfo[curCard.Type]
@@ -132,23 +117,25 @@ func (ac Action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) 
 	cardInfo[curCard.Type] = curCardArr
 	redis.SetValue(key, utils.ToJSON(cardInfo), time.Hour)
 
-	var resList []model.Result
+	var resList []model.Action
 	//如果是第一张出牌则可以判断是否可以枪金
 	surplusCardArr := GetSurplusCard(roomNum)
 	if len(surplusCardArr) == 47 {
-		var res model.Result
+		var res model.Action
 		res.Player = curPlayer
 		if robGold(cardInfo) {
 			res.Action = []string{"robGold"}
 		}
 		resList = append(resList, res)
 	} else {
-		resList = append(resList, model.Result{})
+		resList = append(resList, model.Action{
+			Player: curPlayer,
+		})
 	}
 	//判断其他用户如果获取到该牌是否能胡牌
 	nextPlayer := ""
 	for i := 0; i < 3; i++ {
-		var res model.Result
+		var res model.Action
 		nextPlayer = GetNextPlayer(curPlayer)
 		res.Player = nextPlayer
 		nextCardInfo := GetPlayerCardInfo(roomNum, nextPlayer)
@@ -176,11 +163,11 @@ func (ac Action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) 
 		resList = append(resList, res)
 		curPlayer = nextPlayer
 	}
-	return resList
+	return utils.Success(resList)
 }
 
 //吃牌
-func (ac Action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Card, player string) {
+func (ac *action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Card, player string) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 
@@ -211,11 +198,11 @@ func (ac Action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Card
 	key := fmt.Sprintf(`%d-%s`, roomNum, player)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 
-	return
+	return utils.Success(nil)
 }
 
 //碰牌
-func (ac Action) TouchCard(roomNum int, curCard model.Card, player string) {
+func (ac *action) TouchCard(roomNum int, curCard model.Card, player string) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
@@ -233,10 +220,12 @@ func (ac Action) TouchCard(roomNum int, curCard model.Card, player string) {
 	fmt.Println("key", key)
 	fmt.Println("cardInfo", cardInfo)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
+
+	return utils.Success(nil)
 }
 
 //杠牌
-func (ac Action) BarCard(roomNum int, curCard model.Card, player string) model.Result {
+func (ac *action) BarCard(roomNum int, curCard model.Card, player string) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
@@ -251,7 +240,7 @@ func (ac Action) BarCard(roomNum int, curCard model.Card, player string) model.R
 	cardInfo[curCard.Type] = newArr
 
 	//杠玩后马上从背后摸一张，判断能不能杠上开花
-	res := model.Result{
+	res := model.Action{
 		Player: player,
 	}
 	surplusCardArr := GetSurplusCard(roomNum)
@@ -275,5 +264,5 @@ func (ac Action) BarCard(roomNum int, curCard model.Card, player string) model.R
 	key = fmt.Sprintf(`%d-%s`, roomNum, player)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Second)
 
-	return res
+	return utils.Success(res)
 }

@@ -37,8 +37,8 @@ func (st CardType) String() string {
 
 //牌定义
 type Card struct {
-	Value int
-	Type  string
+	Value int    `json:"value"`
+	Type  string `json:"type"`
 }
 
 //实现string
@@ -56,9 +56,16 @@ func (sc SortCards) Sort() {
 	})
 }
 
-type Result struct {
+type Action struct {
 	Player   string   `json:"player"`
 	Action   []string `json:"action"`
+	GardCard *Card    `json:"gardCard"`
 	EatCards [][]Card `json:"eatCards"`
 	BarCards [][]Card `json:"barCards"`
+}
+
+type Result struct {
+	Status int         `json:"status" bson:"status"`
+	Msg    string      `json:"msg" bson:"msg"`
+	Data   interface{} `json:"data" bson:"data"`
 }

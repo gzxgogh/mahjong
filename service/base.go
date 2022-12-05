@@ -78,8 +78,6 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 	length := len(surplusCardArr)
 	gold := surplusCardArr[length-1].String()
 	surplusCardArr = append(surplusCardArr[:length-1], surplusCardArr[length:]...)
-	keyPlayerCards[startGroupNum] = append(keyPlayerCards[startGroupNum], surplusCardArr[0])
-	surplusCardArr = append(surplusCardArr[:0], surplusCardArr[(0+1):]...)
 
 	for playerNum, arr := range keyPlayerCards {
 		kInfo := make(map[string][]int)
@@ -99,7 +97,6 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 		//存入用户手牌
 		redis.SetValue(fmt.Sprintf(`%d-player%d`, roomNum, playerNum), utils.ToJSON(kInfo), 1*time.Hour)
 	}
-
 	//存入分配玩后各个玩家手里的牌，和场上现有的牌
 	redis.SetValue(fmt.Sprintf(`%d-glod`, roomNum), gold, 1*time.Hour)
 	redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCardArr), 1*time.Hour)
@@ -382,26 +379,30 @@ func barkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
 
 	return false, finalArr
 }
+
 func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 	goldNum := len(cardInfo["金"])
 	if goldNum == 3 {
 		return true
 	}
 	pairNum := 0
+
 	for typ, arr := range cardInfo {
 		if typ == model.CardType_G {
 			continue
 		}
+		newArr := make([]int, len(arr))
+		copy(newArr, arr)
 		//1-9 每张牌的数量
 		if typ == curCard.Type {
-			arr = append(arr, curCard.Value)
-			sort.Ints(arr)
+			newArr = append(newArr, curCard.Value)
+			sort.Ints(newArr)
 		}
 		cardsNum := make([]int, 10)
-		for _, card := range arr {
+		for _, card := range newArr {
 			cardsNum[card]++
 		}
-		isHu := computeCards(cardsNum, pairNum, goldNum)
+		isHu := computeCards(cardsNum, &pairNum, &goldNum)
 		if !isHu {
 			return false
 		}
@@ -425,7 +426,7 @@ func ziMoCard(cardInfo map[string][]int) bool {
 		for _, card := range arr {
 			cardsNum[card]++
 		}
-		isHu := computeCards(cardsNum, pairNum, goldNum)
+		isHu := computeCards(cardsNum, &pairNum, &goldNum)
 		if !isHu {
 			return false
 		}
@@ -444,7 +445,7 @@ func ziMoCard(cardInfo map[string][]int) bool {
 	在回来减去两个 3 剩下 334567 ，在减去345剩下367不能胡；
 	在回来到下面减一个345 剩33367，减去333 剩下67 ，这里和第一次其实是一样的算法，只是顺序不同。
 */
-func computeCards(cardsNum []int, pairNum, goldNum int) bool {
+func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 	cnt := 0
 	for _, num := range cardsNum {
 		if num > 0 {
@@ -471,25 +472,25 @@ func computeCards(cardsNum []int, pairNum, goldNum int) bool {
 			//这种不行就向下传递。。。
 			fallthrough
 		case 2:
-			if pairNum == 0 {
-				pairNum++
+			if *pairNum == 0 {
+				*pairNum++
 				cardsNum[i] -= 2
 				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i] += 2
 			}
-			if pairNum == 1 && goldNum == 0 {
+			if *pairNum == 1 && *goldNum == 0 {
 				return false
 			}
-			if pairNum > 0 && goldNum > 0 {
+			if *pairNum > 0 && *goldNum > 0 {
 				cardsNum[i] -= 2
-				goldNum--
+				*goldNum--
 				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i] += 2
-				goldNum++
+				*goldNum++
 			}
 			fallthrough
 		case 1:
@@ -505,27 +506,27 @@ func computeCards(cardsNum []int, pairNum, goldNum int) bool {
 				cardsNum[i+2]++
 			}
 			//如果发现普通的值不够则使用金
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && goldNum > 0 {
+			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && *goldNum > 0 {
 				cardsNum[i]--
 				cardsNum[i+1]--
-				goldNum--
+				*goldNum--
 				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
 				cardsNum[i+1]++
-				goldNum++
+				*goldNum++
 			}
-			if i+2 < len(cardsNum) && cardsNum[i+2] > 0 && goldNum > 0 {
+			if i+2 < len(cardsNum) && cardsNum[i+2] > 0 && *goldNum > 0 {
 				cardsNum[i]--
 				cardsNum[i+2]--
-				goldNum--
+				*goldNum--
 				if computeCards(cardsNum, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
 				cardsNum[i+2]++
-				goldNum++
+				*goldNum++
 			}
 		}
 	}
