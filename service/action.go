@@ -67,7 +67,7 @@ func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result
 
 //获取该局的金
 func (ac *action) GetGoldCard(roomNum int) model.Result {
-	gold := redis.GetValue(fmt.Sprintf(`%d-glod`, roomNum))
+	gold := GetGoldCard(roomNum)
 	return utils.Success(gold)
 }
 
@@ -301,16 +301,29 @@ func (ac *action) GetAbandonCards(roomNum int) model.Result {
 
 //获取用户手牌
 func (ac *action) GetPlayerCards(roomNum int) model.Result {
-	obj := make(map[string][]model.Card)
+	obj := make(map[string][]map[string]interface{})
+	gold := GetGoldCard(roomNum)
 	for i := 1; i <= 4; i++ {
 		player := fmt.Sprintf("player%d", i)
 		cardInfo := GetPlayerCardInfo(roomNum, player)
-		var cardsArr []model.Card
+		var cardsArr []map[string]interface{}
+
+		for j := 0; j < len(cardInfo[model.CardType_G]); j++ {
+			cardsArr = append(cardsArr, map[string]interface{}{
+				"type":  gold.Type,
+				"value": gold.Value,
+				"gold":  true,
+			})
+		}
+
 		for typ, arr := range cardInfo {
+			if typ == model.CardType_G {
+				continue
+			}
 			for _, value := range arr {
-				cardsArr = append(cardsArr, model.Card{
-					Type:  typ,
-					Value: value,
+				cardsArr = append(cardsArr, map[string]interface{}{
+					"type":  typ,
+					"value": value,
 				})
 			}
 		}

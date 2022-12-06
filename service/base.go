@@ -41,6 +41,14 @@ func GetStartGroup(diceNum, player int) int {
 	return 0
 }
 
+//获取金
+func GetGoldCard(roomNum int) model.Card {
+	value := redis.GetValue(fmt.Sprintf(`%d-glod`, roomNum))
+	var gold model.Card
+	utils.FromJSON(value, &gold)
+	return gold
+}
+
 //抓牌并且分牌
 func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card) {
 	var newCardsArr, surplusCardArr []model.Card
@@ -76,15 +84,15 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 	//剩余的牌数,最后一张为金,庄家多模第一张门牌,扣减剩余排队
 	surplusCardArr = append(surplusCardArr, newCardsArr[curNum:]...)
 	length := len(surplusCardArr)
-	gold := surplusCardArr[length-1].String()
+	gold := surplusCardArr[length-1]
 	surplusCardArr = append(surplusCardArr[:length-1], surplusCardArr[length:]...)
 
 	for playerNum, arr := range keyPlayerCards {
 		kInfo := make(map[string][]int)
 		for _, item := range arr {
-			if item.String() == gold {
+			if item.String() == gold.String() {
 				kInfo[model.CardType_G] = append(kInfo[model.CardType_G], 1)
-			} else if item.Type != model.CardType_Z && item.String() != gold {
+			} else if item.Type != model.CardType_Z && item.String() != gold.String() {
 				kInfo[item.Type] = append(kInfo[item.Type], item.Value)
 			} else {
 				kInfo[model.CardType_Z] = append(kInfo[model.CardType_Z], 1)
@@ -98,7 +106,7 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 		redis.SetValue(fmt.Sprintf(`%d-player%d`, roomNum, playerNum), utils.ToJSON(kInfo), 1*time.Hour)
 	}
 	//存入分配玩后各个玩家手里的牌，和场上现有的牌
-	redis.SetValue(fmt.Sprintf(`%d-glod`, roomNum), gold, 1*time.Hour)
+	redis.SetValue(fmt.Sprintf(`%d-glod`, roomNum), utils.ToJSON(gold), 1*time.Hour)
 	redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCardArr), 1*time.Hour)
 }
 
