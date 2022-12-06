@@ -298,3 +298,23 @@ func (ac *action) GetAbandonCards(roomNum int) model.Result {
 
 	return utils.Success(obj)
 }
+
+//获取用户手牌
+func (ac *action) GetPlayerCards(roomNum int) model.Result {
+	obj := make(map[string][]model.Card)
+	for i := 1; i <= 4; i++ {
+		player := fmt.Sprintf("player%d", i)
+		cardInfo := GetPlayerCardInfo(roomNum, player)
+		var cardsArr []model.Card
+		for typ, arr := range cardInfo {
+			for _, value := range arr {
+				cardsArr = append(cardsArr, model.Card{
+					Type:  typ,
+					Value: value,
+				})
+			}
+		}
+		obj[player] = cardsArr
+	}
+	return utils.Success(obj)
+}

@@ -232,3 +232,21 @@ func (ac *action) GetAbandonCards(params map[string]string) model.Result {
 
 	return service.Action.GetAbandonCards(roomNum)
 }
+
+// GetPlayerCards	godoc
+// @Summary		获取用户手牌
+// @Description	获取用户手牌
+// @Tags         麻将
+// @Accept	x-www-form-urlencoded
+// @Produce json
+// @Param	roomNum formData int true "房间号"
+// @Success 200 {string} string	"ok"
+// @Router	/mahjong/player/cards [get]
+func (ac *action) GetPlayerCards(params map[string]string) model.Result {
+	roomNum, err := strconv.Atoi(params["roomNum"])
+	if err != nil {
+		return utils.Error(-1, "无效的参数：roomNum")
+	}
+
+	return service.Action.GetPlayerCards(roomNum)
+}
