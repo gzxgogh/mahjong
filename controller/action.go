@@ -187,5 +187,48 @@ func (ac *action) BarCard(params map[string]string) model.Result {
 	var curdCard model.Card
 	utils.FromJSON(params["curCurd"], &curdCard)
 
-	return service.Action.TouchCard(roomNum, curdCard, params["player"])
+	return service.Action.BarCard(roomNum, curdCard, params["player"])
+}
+
+// RecordAbandonCard	godoc
+// @Summary		记录弃牌堆
+// @Description	记录弃牌堆
+// @Tags         麻将
+// @Accept	x-www-form-urlencoded
+// @Produce json
+// @Param	roomNum formData int true "房间号"
+// @Param	player formData string true "当前的用户"
+// @Param	curCard formData string true "牌{'type':'万','value':5}"
+// @Success 200 {string} string	"ok"
+// @Router	/mahjong/record/abandon/card [post]
+func (ac *action) RecordAbandonCard(params map[string]string) model.Result {
+	roomNum, err := strconv.Atoi(params["roomNum"])
+	if err != nil {
+		return utils.Error(-1, "无效的参数：roomNum")
+	}
+	if params["player"] == "" {
+		return utils.Error(-1, "无效的参数：player")
+	}
+	var curdCard model.Card
+	utils.FromJSON(params["curCurd"], &curdCard)
+
+	return service.Action.RecordAbandonCard(roomNum, curdCard, params["player"])
+}
+
+// GetAbandonCards	godoc
+// @Summary		获取弃牌堆
+// @Description	获取弃牌堆
+// @Tags         麻将
+// @Accept	x-www-form-urlencoded
+// @Produce json
+// @Param	roomNum formData int true "房间号"
+// @Success 200 {string} string	"ok"
+// @Router	/mahjong/abandon/cards/get [get]
+func (ac *action) GetAbandonCards(params map[string]string) model.Result {
+	roomNum, err := strconv.Atoi(params["roomNum"])
+	if err != nil {
+		return utils.Error(-1, "无效的参数：roomNum")
+	}
+
+	return service.Action.GetAbandonCards(roomNum)
 }

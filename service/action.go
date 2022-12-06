@@ -112,6 +112,7 @@ func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card)
 	for i, item := range curCardArr {
 		if curCard.Value == item {
 			curCardArr = append(curCardArr[:i], curCardArr[i+1:]...) //用户手牌移除该牌
+			break
 		}
 	}
 	cardInfo[curCard.Type] = curCardArr
@@ -265,4 +266,35 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player string) model.
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Second)
 
 	return utils.Success(res)
+}
+
+//记录弃牌
+func (ac *action) RecordAbandonCard(roomNum int, curCard model.Card, player string) model.Result {
+	key := fmt.Sprintf("%d-abandonCards", roomNum)
+	value := redis.GetValue(key)
+	if value == "" {
+		obj := make(map[string][]model.Card)
+		obj[player] = []model.Card{curCard}
+		redis.SetValue(key, utils.ToJSON(obj), time.Hour)
+	} else {
+		obj := make(map[string][]model.Card)
+		utils.FromJSON(value, &obj)
+		if len(obj[player]) == 0 {
+			obj[player] = []model.Card{curCard}
+		} else {
+			obj[player] = append(obj[player], curCard)
+		}
+		redis.SetValue(key, utils.ToJSON(obj), time.Hour)
+	}
+	return utils.Success(nil)
+}
+
+//获取弃牌堆
+func (ac *action) GetAbandonCards(roomNum int) model.Result {
+	key := fmt.Sprintf("%d-abandonCards", roomNum)
+	value := redis.GetValue(key)
+	obj := make(map[string][]model.Card)
+	utils.FromJSON(value, &obj)
+
+	return utils.Success(obj)
 }

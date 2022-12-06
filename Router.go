@@ -46,6 +46,12 @@ func setupRouter() *gin.Engine {
 	engine.POST("/mahjong/bar/card", func(c *gin.Context) {
 		c.JSON(http.StatusOK, controller.Action.BarCard(GinParamMap(c)))
 	})
+	engine.POST("/mahjong/record/abandon/card", func(c *gin.Context) {
+		c.JSON(http.StatusOK, controller.Action.RecordAbandonCard(GinParamMap(c)))
+	})
+	engine.GET("/mahjong/abandon/cards", func(c *gin.Context) {
+		c.JSON(http.StatusOK, controller.Action.GetAbandonCards(GinParamMap(c)))
+	})
 
 	return engine
 }
