@@ -154,6 +154,7 @@ func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card)
 			actionArr = append(actionArr, "touchCard")
 		}
 		if i == 0 {
+			fmt.Println("curCard", curCard, nextCardInfo)
 			flag, eatCards := eatCard(curCard, nextCardInfo)
 			if flag {
 				actionArr = append(actionArr, "eatCard")
@@ -187,11 +188,13 @@ func (ac *action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Car
 	for i, item := range arr {
 		if item == a {
 			arr = append(arr[:i], arr[i+1:]...)
+			break
 		}
 	}
 	for i, item := range arr {
 		if item == b {
 			arr = append(arr[:i], arr[i+1:]...)
+			break
 		}
 	}
 

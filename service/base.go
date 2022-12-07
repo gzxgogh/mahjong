@@ -159,23 +159,18 @@ func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Car
 	switch curCard.Value {
 	case 1:
 		for _, item := range cardInfo[curCard.Type] {
+			fmt.Println("item", item)
 			if item == 2 {
 				greaterOneCard = item
 			} else if item == 3 {
-				greaterOneCard = item
+				greaterTwoCard = item
 			}
 		}
 		if greaterOneCard != 0 && greaterTwoCard != 0 {
 			flag = true
 			cardGroup = append(cardGroup, curCard)
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterOneCard,
-			})
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterTwoCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterOneCard})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterTwoCard})
 		}
 	case 2:
 		for _, item := range cardInfo[curCard.Type] {
@@ -189,27 +184,15 @@ func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Car
 		}
 		if lessOneCard != 0 && greaterOneCard != 0 {
 			flag = true
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessOneCard})
 			cardGroup = append(cardGroup, curCard)
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterOneCard})
 		}
 		if greaterOneCard != 0 && greaterTwoCard != 0 {
 			flag = true
 			cardGroup = append(cardGroup, curCard)
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterOneCard,
-			})
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterTwoCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterOneCard})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterTwoCard})
 		}
 	case 8:
 		for _, item := range cardInfo[curCard.Type] {
@@ -223,26 +206,14 @@ func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Car
 		}
 		if lessOneCard != 0 && greaterOneCard != 0 {
 			flag = true
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessOneCard})
 			cardGroup = append(cardGroup, curCard)
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterOneCard})
 		}
 		if lessOneCard != 0 && lessTwoCard != 0 {
 			flag = true
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessTwoCard,
-			})
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessTwoCard})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessOneCard})
 			cardGroup = append(cardGroup, curCard)
 		}
 	case 9:
@@ -254,14 +225,8 @@ func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Car
 			}
 		}
 		if lessOneCard != 0 && lessTwoCard != 0 {
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessTwoCard,
-			})
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessTwoCard})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessOneCard})
 			cardGroup = append(cardGroup, curCard)
 		}
 	default:
@@ -278,48 +243,31 @@ func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Car
 		}
 		if lessTwoCard != 0 && lessOneCard != 0 {
 			flag = true
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessTwoCard,
-			})
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessTwoCard})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessOneCard})
 			cardGroup = append(cardGroup, curCard)
 		}
 		if lessOneCard != 0 && greaterOneCard != 0 {
 			flag = true
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: lessOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: lessOneCard})
 			cardGroup = append(cardGroup, curCard)
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterOneCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterOneCard})
 		}
 		if greaterOneCard != 0 && greaterTwoCard != 0 {
 			flag = true
 			cardGroup = append(cardGroup, curCard)
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterOneCard,
-			})
-			cardGroup = append(cardGroup, model.Card{
-				Type:  curCard.Type,
-				Value: greaterTwoCard,
-			})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterOneCard})
+			cardGroup = append(cardGroup, model.Card{Type: curCard.Type, Value: greaterTwoCard})
 		}
 	}
-
 	total := len(cardGroup) / 3
+
 	var finalArr [][]model.Card
 	for i := 0; i < total; i++ {
 		var newArr []model.Card
 		for j := 0; j < 3; j++ {
 			if len(newArr) < 3 {
+				fmt.Println("(i*3)+j", (i*3)+j)
 				newArr = append(newArr, cardGroup[(i*3)+j])
 			}
 		}
