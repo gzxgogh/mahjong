@@ -89,7 +89,7 @@ func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	if ziMoCard(cardInfo) {
 		actionArr = append(actionArr, "ziMo")
 	}
-	flag, cardGroup := barkBarCard(cardInfo)
+	flag, cardGroup := darkBarCard(cardInfo)
 	if flag {
 		actionArr = append(actionArr, "barCard")
 		result.BarCards = cardGroup
@@ -198,6 +198,7 @@ func (ac *action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Car
 	cardInfo[curCard.Type] = arr
 	key := fmt.Sprintf(`%d-%s`, roomNum, player)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
+	assistantCards(roomNum, player, "eatCard", cardGroup)
 
 	return utils.Success(nil)
 }
@@ -208,12 +209,17 @@ func (ac *action) TouchCard(roomNum int, curCard model.Card, player string) mode
 	arr := cardInfo[curCard.Type]
 	var newArr []int
 	total := 0
-	for _, item := range arr {
-		if item == curCard.Value && total <= 2 {
+	cardGroup := []model.Card{curCard}
+	for _, value := range arr {
+		if value == curCard.Value && total <= 2 {
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: value,
+			})
 			total++
 			continue
 		}
-		newArr = append(newArr, item)
+		newArr = append(newArr, value)
 	}
 	cardInfo[curCard.Type] = newArr
 
@@ -221,22 +227,34 @@ func (ac *action) TouchCard(roomNum int, curCard model.Card, player string) mode
 	fmt.Println("key", key)
 	fmt.Println("cardInfo", cardInfo)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
+	assistantCards(roomNum, player, "touchCard", cardGroup)
 
 	return utils.Success(nil)
 }
 
-//杠牌
-func (ac *action) BarCard(roomNum int, curCard model.Card, player string) model.Result {
+//明杠
+func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType string) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
-	total := 0
-	for _, item := range arr {
-		if item == curCard.Value && item <= 3 {
-			total++
+	cardGroup := []model.Card{curCard}
+	total := 3
+	if barType == "darkBar" {
+		total = 4
+	}
+	for _, value := range arr {
+		if value == curCard.Value && total > 0 {
+			cardGroup = append(cardGroup, model.Card{
+				Type:  curCard.Type,
+				Value: value,
+			})
+			total--
 			continue
 		}
-		newArr = append(newArr, item)
+		newArr = append(newArr, value)
+	}
+	if total != 0 {
+		return utils.Error(-1, "无效的杠牌")
 	}
 	cardInfo[curCard.Type] = newArr
 
@@ -264,6 +282,7 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player string) model.
 	//重新存入用户手牌
 	key = fmt.Sprintf(`%d-%s`, roomNum, player)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Second)
+	assistantCards(roomNum, player, "barType", cardGroup)
 
 	return utils.Success(res)
 }
@@ -301,13 +320,16 @@ func (ac *action) GetAbandonCards(roomNum int) model.Result {
 
 //获取用户手牌
 func (ac *action) GetPlayerCards(roomNum int) model.Result {
-	obj := make(map[string][]map[string]interface{})
+	value := redis.GetValue(fmt.Sprintf(`%d-assistantCards`, roomNum))
+	assistantInfo := make(map[string]interface{})
+	utils.FromJSON(value, &assistantInfo)
+	result := make(map[string]interface{})
 	gold := GetGoldCard(roomNum)
 	for i := 1; i <= 4; i++ {
 		player := fmt.Sprintf("player%d", i)
 		cardInfo := GetPlayerCardInfo(roomNum, player)
-		var cardsArr []map[string]interface{}
-
+		playerCard := make(map[string]interface{})
+		cardsArr := make([]map[string]interface{}, 0)
 		for j := 0; j < len(cardInfo[model.CardType_G]); j++ {
 			cardsArr = append(cardsArr, map[string]interface{}{
 				"type":  gold.Type,
@@ -315,7 +337,6 @@ func (ac *action) GetPlayerCards(roomNum int) model.Result {
 				"gold":  true,
 			})
 		}
-
 		for typ, arr := range cardInfo {
 			if typ == model.CardType_G {
 				continue
@@ -327,7 +348,9 @@ func (ac *action) GetPlayerCards(roomNum int) model.Result {
 				})
 			}
 		}
-		obj[player] = cardsArr
+		playerCard["main"] = cardsArr
+		playerCard["assistant"] = assistantInfo[player]
+		result[player] = playerCard
 	}
-	return utils.Success(obj)
+	return utils.Success(result)
 }

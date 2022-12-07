@@ -173,6 +173,7 @@ func (ac *action) TouchCard(params map[string]string) model.Result {
 // @Produce json
 // @Param	roomNum formData int true "房间号"
 // @Param	player formData string true "当前的用户"
+// @Param	barType formData string true "rightBar/darkBar"
 // @Param	curCard formData string true "牌{'type':'万','value':5}"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/bar/card [post]
@@ -184,10 +185,13 @@ func (ac *action) BarCard(params map[string]string) model.Result {
 	if params["player"] == "" {
 		return utils.Error(-1, "无效的参数：player")
 	}
+	if params["barType"] != "rightBar" && params["barType"] != "darkBar" {
+		return utils.Error(-1, "无效的参数：barType")
+	}
 	var curdCard model.Card
 	utils.FromJSON(params["curCurd"], &curdCard)
 
-	return service.Action.BarCard(roomNum, curdCard, params["player"])
+	return service.Action.BarCard(roomNum, curdCard, params["player"], params["barType"])
 }
 
 // RecordAbandonCard	godoc

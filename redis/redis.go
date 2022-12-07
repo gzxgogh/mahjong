@@ -32,5 +32,8 @@ func GetValue(key string) string {
 	res := DB.Get(key)
 	str := strings.ReplaceAll(fmt.Sprint(res), " ", "")
 	str = strings.ReplaceAll(str, fmt.Sprintf(`get%s:`, key), "")
+	if str == "redis:nil" {
+		str = ""
+	}
 	return str
 }

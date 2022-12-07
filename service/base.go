@@ -365,7 +365,7 @@ func rightBarCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]mode
 }
 
 //暗杠
-func barkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
+func darkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
 	var finalArr [][]model.Card
 	for typ, arr := range cardInfo {
 		var cardGroup []model.Card
@@ -388,6 +388,30 @@ func barkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
 	return false, finalArr
 }
 
+//用户副手牌，即吃牌碰牌等。
+func assistantCards(roomNum int, player, groupType string, cardGroup []model.Card) {
+	key := fmt.Sprintf(`%d-assistantCards`, roomNum)
+	value := redis.GetValue(key)
+	info := make(map[string]map[string][]model.Card)
+	if value == "" {
+		obj := make(map[string][]model.Card)
+		obj[groupType] = cardGroup
+		info[player] = obj
+		redis.SetValue(key, utils.ToJSON(info), time.Hour)
+	} else {
+		utils.FromJSON(value, &info)
+		if info[player] == nil {
+			obj := make(map[string][]model.Card)
+			obj[groupType] = cardGroup
+			info[player] = obj
+		} else {
+			info[player][groupType] = append(info[player][groupType], cardGroup...)
+		}
+	}
+	redis.SetValue(key, utils.ToJSON(info), time.Hour)
+}
+
+//胡牌
 func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 	goldNum := len(cardInfo["金"])
 	if goldNum == 3 {
