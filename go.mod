@@ -2,10 +2,9 @@ module mahjong
 
 go 1.17
 
-require (
-	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/swaggo/swag v1.8.8
-)
+require github.com/go-redis/redis v6.15.9+incompatible
+
+require github.com/swaggo/swag v1.8.8 // indirect
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
