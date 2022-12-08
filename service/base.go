@@ -406,7 +406,7 @@ func ziMoCard(cardInfo map[string][]int) bool {
 		for _, card := range arr {
 			cardsNum[card]++
 		}
-		//fmt.Println(arr)
+		fmt.Println(arr)
 		//fmt.Println("初始",cardsNum)
 		//没有金时的最优牌获取，取到剩余匹配不上的牌，再用金进行排列组合
 		isHu := false
@@ -425,14 +425,80 @@ func ziMoCard(cardInfo map[string][]int) bool {
 /*
 	对子只能存在一对,如果存在金，则可以用金做抵扣
 	从第一张牌开始计算，假如一个牌有4张，在整个牌里面他只能做刻字和一个顺子；除开 333344445555 这种特殊情况，但是拆分出来也是判断可以胡的。
-	所以减去三张牌，ComputeCards，这个时候它的第一张牌就只有一张，自然而然的就走找顺子的道路上了。
+	所以减去三张牌，SplitCards，这个时候它的第一张牌就只有一张，自然而然的就走找顺子的道路上了。
 	但是减去三张发现后面也没有办法胡，看代码继续走下面，再减去2张试试呢。比如 22223344 这种牌
-	一张牌它就只能去找后面的顺子，没有就不能胡。
+	一张牌它就只能去找后面的顺子，没有就把该张牌记录，往computeCards传，把剩余的牌和金的数量进行组合看能否组成新牌型。
 	这里还有一个问题，就是有重复计算的部分
 	比如 33334567 的牌，减去三个 3 剩下 34567，减去345剩67 则可以用金做抵扣，如果没有则不能糊；
 	在回来减去两个 3 剩下 334567 ，在减去345剩下367不能胡；
 	在回来到下面减一个345 剩33367，减去333 剩下67 ，这里和第一次其实是一样的算法，只是顺序不同。
 */
+
+//获取不能组合的牌
+func SplitCards(cardsNum []int, pairNum *int) (bool, []int) {
+	isHu := false
+	surplusNum := make([]int, 10)
+	cnt := 0
+	for _, num := range cardsNum {
+		if num > 0 {
+			break
+		}
+		cnt++
+	}
+	//判断没有牌为可以胡牌
+	if len(cardsNum) == cnt {
+		return true, nil
+	}
+	for i := 0; i < len(cardsNum); i++ {
+		switch cardsNum[i] {
+		case 4:
+			fallthrough
+		case 3:
+			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
+			//减掉后再传入SplitCards
+			cardsNum[i] -= 3
+			isHu, surplusNum = SplitCards(cardsNum, pairNum)
+			if isHu {
+				return true, nil
+			}
+			//这种不行就向下传递。。。
+			fallthrough
+		case 2:
+			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+				cardsNum[i]--
+				cardsNum[i+1]--
+				cardsNum[i+2]--
+				isHu, surplusNum = SplitCards(cardsNum, pairNum)
+				if isHu {
+					return true, nil
+				}
+			}
+			if *pairNum == 0 && cardsNum[i] > 1 {
+				*pairNum++
+				cardsNum[i] -= 2
+				isHu, surplusNum = SplitCards(cardsNum, pairNum)
+				if isHu {
+					return true, nil
+				}
+			}
+			fallthrough
+		case 1:
+			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+				cardsNum[i]--
+				cardsNum[i+1]--
+				cardsNum[i+2]--
+				isHu, surplusNum = SplitCards(cardsNum, pairNum)
+				if isHu {
+					return true, nil
+				}
+			}
+		}
+	}
+	surplusNum = cardsNum
+	return false, surplusNum
+}
+
+//根据剩余的牌，和金来重新组合牌
 func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 	cnt := 0
 	for _, num := range cardsNum {
@@ -447,7 +513,27 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 	}
 	for i := 0; i < len(cardsNum); i++ {
 		switch cardsNum[i] {
+		case 4:
+			fallthrough
+		case 3:
+			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
+			//减掉后再传入SplitCards
+			cardsNum[i] -= 3
+			if computeCards(cardsNum, pairNum, goldNum) {
+				return true
+			}
+			//这种不行就向下传递。。。
+			fallthrough
 		case 2:
+			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+				cardsNum[i]--
+				cardsNum[i+1]--
+				cardsNum[i+2]--
+				if computeCards(cardsNum, pairNum, goldNum) {
+					return true
+				}
+				cardsNum[i] += 2
+			}
 			if *pairNum == 0 {
 				*pairNum++
 				cardsNum[i] -= 2
@@ -459,7 +545,7 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 			if *pairNum == 1 && *goldNum == 0 {
 				return false
 			}
-			if *pairNum > 0 && *goldNum > 0 {
+			if *pairNum > 0 && *goldNum > 0 && cardsNum[i] > 1 {
 				cardsNum[i] -= 2
 				*goldNum--
 				if computeCards(cardsNum, pairNum, goldNum) {
@@ -470,6 +556,17 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 			}
 			fallthrough
 		case 1:
+			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+				cardsNum[i]--
+				cardsNum[i+1]--
+				cardsNum[i+2]--
+				if computeCards(cardsNum, pairNum, goldNum) {
+					return true
+				}
+				cardsNum[i]++
+				cardsNum[i+1]++
+				cardsNum[i+2]++
+			}
 			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && *goldNum > 0 {
 				cardsNum[i]--
 				cardsNum[i+1]--
@@ -514,58 +611,4 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 		}
 	}
 	return false
-}
-
-func SplitCards(cardsNum []int, pairNum *int) (bool, []int) {
-	isHu := false
-	surplusNum := make([]int, 10)
-	cnt := 0
-	for _, num := range cardsNum {
-		if num > 0 {
-			break
-		}
-		cnt++
-	}
-	//判断没有牌为可以胡牌
-	if len(cardsNum) == cnt {
-		return true, nil
-	}
-	for i := 0; i < len(cardsNum); i++ {
-		switch cardsNum[i] {
-		case 4:
-			fallthrough
-		case 3:
-			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
-			//减掉后再传入SplitCards
-			cardsNum[i] -= 3
-			isHu, surplusNum = SplitCards(cardsNum, pairNum)
-			if isHu {
-				return true, nil
-			}
-			//这种不行就向下传递。。。
-			fallthrough
-		case 2:
-			if *pairNum == 0 {
-				*pairNum++
-				cardsNum[i] -= 2
-				isHu, surplusNum = SplitCards(cardsNum, pairNum)
-				if isHu {
-					return true, nil
-				}
-			}
-			fallthrough
-		case 1:
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
-				cardsNum[i]--
-				cardsNum[i+1]--
-				cardsNum[i+2]--
-				isHu, surplusNum = SplitCards(cardsNum, pairNum)
-				if isHu {
-					return true, nil
-				}
-			}
-		}
-	}
-	surplusNum = cardsNum
-	return false, surplusNum
 }
