@@ -86,8 +86,9 @@ func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	result.Player = curPlayer
 	result.GardCard = &curCard
 	var actionArr []string
-	if ziMoCard(cardInfo) {
-		actionArr = append(actionArr, "ziMo")
+	flag, actionStr := ziMoCard(cardInfo)
+	if flag {
+		actionArr = append(actionArr, actionStr)
 	}
 	flag, cardGroup := darkBarCard(cardInfo)
 	if flag {
@@ -274,8 +275,9 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType strin
 	sort.Ints(caryTypeArr)
 	cardInfo[newCard.Type] = caryTypeArr
 
-	if ziMoCard(cardInfo) {
-		res.Action = []string{"ziMo"}
+	flag, actionStr := ziMoCard(cardInfo)
+	if flag {
+		res.Action = []string{actionStr}
 	}
 	//扣减牌数，重进记录
 	surplusCardArr = append(surplusCardArr[:length-1], surplusCardArr[length:]...)

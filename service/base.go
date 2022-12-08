@@ -145,10 +145,24 @@ func GetNextPlayer(curPlayer string) string {
 //抢金
 func robGold(cardInfo map[string][]int) bool {
 	cardInfo[model.CardType_G] = append(cardInfo[model.CardType_G], 1)
-	if ziMoCard(cardInfo) {
-		return true
+	goldNum := len(cardInfo["金"])
+	pairNum := 0
+	isXianJin := false
+	for typ, arr := range cardInfo {
+		if typ == model.CardType_G {
+			continue
+		}
+		//1-9 每张牌的数量
+		cardsNum := make([]int, 10)
+		for _, card := range arr {
+			cardsNum[card]++
+		}
+		isHu := computeCards(cardsNum, &isXianJin, &pairNum, &goldNum)
+		if !isHu {
+			return false
+		}
 	}
-	return false
+	return true
 }
 
 //吃牌
@@ -362,11 +376,8 @@ func assistantCards(roomNum int, player, groupType string, cardGroup []model.Car
 //胡牌
 func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 	goldNum := len(cardInfo["金"])
-	if goldNum == 3 {
-		return true
-	}
 	pairNum := 0
-
+	isXianJin := false
 	for typ, arr := range cardInfo {
 		if typ == model.CardType_G {
 			continue
@@ -382,7 +393,7 @@ func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 		for _, card := range newArr {
 			cardsNum[card]++
 		}
-		isHu := computeCards(cardsNum, &pairNum, &goldNum)
+		isHu := computeCards(cardsNum, &isXianJin, &pairNum, &goldNum)
 		if !isHu {
 			return false
 		}
@@ -391,12 +402,13 @@ func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 }
 
 //自摸
-func ziMoCard(cardInfo map[string][]int) bool {
+func ziMoCard(cardInfo map[string][]int) (bool, string) {
 	goldNum := len(cardInfo["金"])
 	if goldNum == 3 {
-		return true
+		return true, "三金"
 	}
 	pairNum := 0
+	isXianJin := false
 	for typ, arr := range cardInfo {
 		if typ == model.CardType_G {
 			continue
@@ -406,20 +418,19 @@ func ziMoCard(cardInfo map[string][]int) bool {
 		for _, card := range arr {
 			cardsNum[card]++
 		}
-		fmt.Println(arr)
-		//fmt.Println("初始",cardsNum)
-		//没有金时的最优牌获取，取到剩余匹配不上的牌，再用金进行排列组合
-		isHu := false
-		isHu, cardsNum = SplitCards(cardsNum, &pairNum)
-		//fmt.Println("结束",cardsNum)
+		isHu := computeCards(cardsNum, &isXianJin, &pairNum, &goldNum)
 		if !isHu {
-			isHu = computeCards(cardsNum, &pairNum, &goldNum)
-			if !isHu {
-				return false
-			}
+			return false, ""
 		}
 	}
-	return true
+	if goldNum == 2 {
+		return true, "金雀"
+	}
+	if isXianJin {
+		return true, "游金"
+	}
+
+	return true, "自摸"
 }
 
 /*
@@ -499,7 +510,7 @@ func SplitCards(cardsNum []int, pairNum *int) (bool, []int) {
 }
 
 //根据剩余的牌，和金来重新组合牌
-func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
+func computeCards(cardsNum []int, isXianJin *bool, pairNum, goldNum *int) bool {
 	cnt := 0
 	for _, num := range cardsNum {
 		if num > 0 {
@@ -519,9 +530,10 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
 			//减掉后再传入SplitCards
 			cardsNum[i] -= 3
-			if computeCards(cardsNum, pairNum, goldNum) {
+			if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 				return true
 			}
+			cardsNum[i] += 3
 			//这种不行就向下传递。。。
 			fallthrough
 		case 2:
@@ -529,30 +541,31 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 				cardsNum[i]--
 				cardsNum[i+1]--
 				cardsNum[i+2]--
-				if computeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
-				cardsNum[i] += 2
+				cardsNum[i]++
+				cardsNum[i+1]++
+				cardsNum[i+2]++
 			}
 			if *pairNum == 0 {
 				*pairNum++
 				cardsNum[i] -= 2
-				if computeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
+				*pairNum--
 				cardsNum[i] += 2
-			}
-			if *pairNum == 1 && *goldNum == 0 {
-				return false
-			}
-			if *pairNum > 0 && *goldNum > 0 && cardsNum[i] > 1 {
+			} else if *pairNum == 1 && *goldNum > 0 {
 				cardsNum[i] -= 2
 				*goldNum--
-				if computeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i] += 2
 				*goldNum++
+			} else {
+				return false
 			}
 			fallthrough
 		case 1:
@@ -560,53 +573,56 @@ func computeCards(cardsNum []int, pairNum, goldNum *int) bool {
 				cardsNum[i]--
 				cardsNum[i+1]--
 				cardsNum[i+2]--
-				if computeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
 				cardsNum[i+1]++
 				cardsNum[i+2]++
-			}
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && *goldNum > 0 {
+			} else if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] == 0 && *goldNum > 0 {
 				cardsNum[i]--
 				cardsNum[i+1]--
 				*goldNum--
-				if computeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
 				cardsNum[i+1]++
 				*goldNum++
-			}
-			if i+2 < len(cardsNum) && cardsNum[i+2] > 0 && *goldNum > 0 {
+			} else if i+2 < len(cardsNum) && cardsNum[i+1] == 0 && cardsNum[i+2] > 0 && *goldNum > 0 {
 				cardsNum[i]--
 				cardsNum[i+2]--
 				*goldNum--
-				if computeCards(cardsNum, pairNum, goldNum) {
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
 				cardsNum[i+2]++
 				*goldNum++
 			}
-			if i+2 < len(cardsNum) && cardsNum[i+1] == 0 && cardsNum[i+2] == 0 && *goldNum > 0 {
-				cardsNum[i]--
-				*goldNum--
-				if computeCards(cardsNum, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i]++
-				*goldNum++
-			}
-			if i+2 >= len(cardsNum) && *goldNum > 0 {
+			//剩单张牌，并且对子已经存在
+			if *pairNum == 0 && *goldNum == 1 {
 				cardsNum[i]--
 				*goldNum--
 				*pairNum++
-				if computeCards(cardsNum, pairNum, goldNum) {
+				*isXianJin = true
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+					return true
+				}
+				*isXianJin = false
+				cardsNum[i]++
+				*goldNum++
+				*pairNum--
+			} else if *pairNum == 1 && *goldNum > 1 {
+				cardsNum[i]--
+				*goldNum -= 2
+				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
 					return true
 				}
 				cardsNum[i]++
-				*goldNum++
+				*goldNum += 2
+			} else {
+				return false
 			}
 		}
 	}
