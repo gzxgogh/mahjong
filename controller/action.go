@@ -188,10 +188,10 @@ func (ac *action) BarCard(params map[string]string) model.Result {
 	if params["barType"] != "rightBar" && params["barType"] != "darkBar" {
 		return utils.Error(-1, "无效的参数：barType")
 	}
-	var curdCard model.Card
-	utils.FromJSON(params["curCurd"], &curdCard)
+	var curCard model.Card
+	utils.FromJSON(params["curCard"], &curCard)
 
-	return service.Action.BarCard(roomNum, curdCard, params["player"], params["barType"])
+	return service.Action.BarCard(roomNum, curCard, params["player"], params["barType"])
 }
 
 // RecordAbandonCard	godoc

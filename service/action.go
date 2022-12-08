@@ -75,8 +75,16 @@ func (ac *action) GetGoldCard(roomNum int) model.Result {
 func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	surplusCard := GetSurplusCard(roomNum)
 	curCard := surplusCard[0]
-	fmt.Println("摸到的牌为：", curCard)
+	gold := GetGoldCard(roomNum)
+
 	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
+	if gold.String() == curCard.String() {
+		curCard = model.Card{
+			Type:  model.CardType_G,
+			Value: 1,
+		}
+	}
+	fmt.Println("摸到的牌为：", curCard)
 	curCardTypeArr := cardInfo[curCard.Type]
 	curCardTypeArr = append(curCardTypeArr, curCard.Value)
 	sort.Ints(curCardTypeArr)
@@ -238,6 +246,7 @@ func (ac *action) TouchCard(roomNum int, curCard model.Card, player string) mode
 
 //明杠
 func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType string) model.Result {
+
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
@@ -286,7 +295,7 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType strin
 
 	//重新存入用户手牌
 	key = fmt.Sprintf(`%d-%s`, roomNum, player)
-	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Second)
+	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 	assistantCards(roomNum, player, "barType", cardGroup)
 
 	return utils.Success(res)

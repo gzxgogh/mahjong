@@ -43,7 +43,7 @@ func GetStartGroup(diceNum, player int) int {
 
 //获取金
 func GetGoldCard(roomNum int) model.Card {
-	value := redis.GetValue(fmt.Sprintf(`%d-glod`, roomNum))
+	value := redis.GetValue(fmt.Sprintf(`%d-gold`, roomNum))
 	var gold model.Card
 	utils.FromJSON(value, &gold)
 	return gold
@@ -106,7 +106,7 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 		redis.SetValue(fmt.Sprintf(`%d-player%d`, roomNum, playerNum), utils.ToJSON(kInfo), 1*time.Hour)
 	}
 	//存入分配玩后各个玩家手里的牌，和场上现有的牌
-	redis.SetValue(fmt.Sprintf(`%d-glod`, roomNum), utils.ToJSON(gold), 1*time.Hour)
+	redis.SetValue(fmt.Sprintf(`%d-gold`, roomNum), utils.ToJSON(gold), 1*time.Hour)
 	redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCardArr), 1*time.Hour)
 }
 
