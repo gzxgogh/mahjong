@@ -105,6 +105,8 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 		//存入用户手牌
 		redis.SetValue(fmt.Sprintf(`%d-player%d`, roomNum, playerNum), utils.ToJSON(kInfo), 1*time.Hour)
 	}
+	fmt.Println("当场的金为", gold.String())
+	fmt.Println("剩余的牌堆为", utils.ToJSON(surplusCardArr))
 	//存入分配玩后各个玩家手里的牌，和场上现有的牌
 	redis.SetValue(fmt.Sprintf(`%d-gold`, roomNum), utils.ToJSON(gold), 1*time.Hour)
 	redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCardArr), 1*time.Hour)
@@ -298,7 +300,7 @@ func touchCard(curCard model.Card, cardInfo map[string][]int) bool {
 			total++
 		}
 	}
-	if total == 2 {
+	if total >= 2 {
 		return true
 	}
 	return false
@@ -445,70 +447,6 @@ func ziMoCard(cardInfo map[string][]int) (bool, string) {
 	在回来到下面减一个345 剩33367，减去333 剩下67 ，这里和第一次其实是一样的算法，只是顺序不同。
 */
 
-//获取不能组合的牌
-func SplitCards(cardsNum []int, pairNum *int) (bool, []int) {
-	isHu := false
-	surplusNum := make([]int, 10)
-	cnt := 0
-	for _, num := range cardsNum {
-		if num > 0 {
-			break
-		}
-		cnt++
-	}
-	//判断没有牌为可以胡牌
-	if len(cardsNum) == cnt {
-		return true, nil
-	}
-	for i := 0; i < len(cardsNum); i++ {
-		switch cardsNum[i] {
-		case 4:
-			fallthrough
-		case 3:
-			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
-			//减掉后再传入SplitCards
-			cardsNum[i] -= 3
-			isHu, surplusNum = SplitCards(cardsNum, pairNum)
-			if isHu {
-				return true, nil
-			}
-			//这种不行就向下传递。。。
-			fallthrough
-		case 2:
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
-				cardsNum[i]--
-				cardsNum[i+1]--
-				cardsNum[i+2]--
-				isHu, surplusNum = SplitCards(cardsNum, pairNum)
-				if isHu {
-					return true, nil
-				}
-			}
-			if *pairNum == 0 && cardsNum[i] > 1 {
-				*pairNum++
-				cardsNum[i] -= 2
-				isHu, surplusNum = SplitCards(cardsNum, pairNum)
-				if isHu {
-					return true, nil
-				}
-			}
-			fallthrough
-		case 1:
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
-				cardsNum[i]--
-				cardsNum[i+1]--
-				cardsNum[i+2]--
-				isHu, surplusNum = SplitCards(cardsNum, pairNum)
-				if isHu {
-					return true, nil
-				}
-			}
-		}
-	}
-	surplusNum = cardsNum
-	return false, surplusNum
-}
-
 //根据剩余的牌，和金来重新组合牌
 func computeCards(cardsNum []int, isXianJin *bool, pairNum, goldNum *int) bool {
 	cnt := 0
@@ -525,106 +463,177 @@ func computeCards(cardsNum []int, isXianJin *bool, pairNum, goldNum *int) bool {
 	for i := 0; i < len(cardsNum); i++ {
 		switch cardsNum[i] {
 		case 4:
-			fallthrough
+			isHu := computeThree(cardsNum, i, isXianJin, pairNum, goldNum)
+			if isHu {
+				return isHu
+			}
 		case 3:
-			//这种存在这几种情况，可以加后面成顺子，取两张为对子，或取一个刻字
-			//减掉后再传入SplitCards
-			cardsNum[i] -= 3
-			if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-				return true
+			isHu := computeThree(cardsNum, i, isXianJin, pairNum, goldNum)
+			if isHu {
+				return isHu
 			}
-			cardsNum[i] += 3
-			//这种不行就向下传递。。。
-			fallthrough
 		case 2:
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
-				cardsNum[i]--
-				cardsNum[i+1]--
-				cardsNum[i+2]--
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i]++
-				cardsNum[i+1]++
-				cardsNum[i+2]++
+			isHu := computeTwo(cardsNum, i, isXianJin, pairNum, goldNum)
+			if isHu {
+				return isHu
 			}
-			if *pairNum == 0 {
-				*pairNum++
-				cardsNum[i] -= 2
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				*pairNum--
-				cardsNum[i] += 2
-			} else if *pairNum == 1 && *goldNum > 0 {
-				cardsNum[i] -= 2
-				*goldNum--
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i] += 2
-				*goldNum++
-			} else {
-				return false
-			}
-			fallthrough
+			//fallthrough
 		case 1:
-			if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
-				cardsNum[i]--
-				cardsNum[i+1]--
-				cardsNum[i+2]--
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i]++
-				cardsNum[i+1]++
-				cardsNum[i+2]++
-			} else if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] == 0 && *goldNum > 0 {
-				cardsNum[i]--
-				cardsNum[i+1]--
-				*goldNum--
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i]++
-				cardsNum[i+1]++
-				*goldNum++
-			} else if i+2 < len(cardsNum) && cardsNum[i+1] == 0 && cardsNum[i+2] > 0 && *goldNum > 0 {
-				cardsNum[i]--
-				cardsNum[i+2]--
-				*goldNum--
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i]++
-				cardsNum[i+2]++
-				*goldNum++
-			}
-			//剩单张牌，并且对子已经存在
-			if *pairNum == 0 && *goldNum == 1 {
-				cardsNum[i]--
-				*goldNum--
-				*pairNum++
-				*isXianJin = true
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				*isXianJin = false
-				cardsNum[i]++
-				*goldNum++
-				*pairNum--
-			} else if *pairNum == 1 && *goldNum > 1 {
-				cardsNum[i]--
-				*goldNum -= 2
-				if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
-					return true
-				}
-				cardsNum[i]++
-				*goldNum += 2
-			} else {
-				return false
+			isHu := computeOne(cardsNum, i, isXianJin, pairNum, goldNum)
+			if isHu {
+				return isHu
 			}
 		}
 	}
+	return false
+}
+
+func computeThree(cardsNum []int, i int, isXianJin *bool, pairNum, goldNum *int) bool {
+	//先判断111能否成功
+	cardsNum[i] -= 3
+	if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+		return true
+	}
+	cardsNum[i] += 3
+
+	//如果不成功，则判断11,做对子
+	if *pairNum == 0 {
+		*pairNum++
+		cardsNum[i] -= 2
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		*pairNum--
+		cardsNum[i] += 2
+	}
+
+	//如果不成功则判断123，做顺子
+	if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+		cardsNum[i]--
+		cardsNum[i+1]--
+		cardsNum[i+2]--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i]++
+		cardsNum[i+1]++
+		cardsNum[i+2]++
+	}
+
+	//最后都不成功则开始使用金
+	if *pairNum == 1 && *goldNum > 0 {
+		cardsNum[i] -= 2
+		*goldNum--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i] += 2
+		*goldNum++
+	}
+
+	return false
+}
+
+func computeTwo(cardsNum []int, i int, isXianJin *bool, pairNum, goldNum *int) bool {
+
+	//先做对子
+	if *pairNum == 0 {
+		*pairNum++
+		cardsNum[i] -= 2
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		*pairNum--
+		cardsNum[i] += 2
+	}
+
+	//如果不成功则判断123，做顺子
+	if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+		cardsNum[i]--
+		cardsNum[i+1]--
+		cardsNum[i+2]--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i]++
+		cardsNum[i+1]++
+		cardsNum[i+2]++
+	}
+
+	//最后都不成功则开始使用金
+	if *pairNum == 1 && *goldNum > 0 {
+		cardsNum[i] -= 2
+		*goldNum--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i] += 2
+		*goldNum++
+	}
+
+	return false
+}
+
+func computeOne(cardsNum []int, i int, isXianJin *bool, pairNum, goldNum *int) bool {
+	//先做顺子
+	if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] > 0 {
+		cardsNum[i]--
+		cardsNum[i+1]--
+		cardsNum[i+2]--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i]++
+		cardsNum[i+1]++
+		cardsNum[i+2]++
+	}
+
+	//不成功，用金做顺子
+	if i+2 < len(cardsNum) && cardsNum[i+1] > 0 && cardsNum[i+2] == 0 && *goldNum > 0 {
+		cardsNum[i]--
+		cardsNum[i+1]--
+		*goldNum--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i]++
+		cardsNum[i+1]++
+		*goldNum++
+	} else if i+2 < len(cardsNum) && cardsNum[i+1] == 0 && cardsNum[i+2] > 0 && *goldNum > 0 {
+		cardsNum[i]--
+		cardsNum[i+2]--
+		*goldNum--
+		if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+			return true
+		}
+		cardsNum[i]++
+		cardsNum[i+2]++
+		*goldNum++
+	} else if i+2 < len(cardsNum) && cardsNum[i+1] == 0 && cardsNum[i+2] == 0 && *goldNum > 0 {
+		if *pairNum == 0 && *goldNum == 1 {
+			cardsNum[i]--
+			*goldNum--
+			*pairNum++
+			*isXianJin = true
+			if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+				return true
+			}
+			*isXianJin = false
+			cardsNum[i]++
+			*goldNum++
+			*pairNum--
+		} else if *pairNum == 1 && *goldNum > 1 {
+			cardsNum[i]--
+			*goldNum -= 2
+			if computeCards(cardsNum, isXianJin, pairNum, goldNum) {
+				return true
+			}
+			cardsNum[i]++
+			*goldNum += 2
+		} else {
+			return false
+		}
+	}
+
 	return false
 }

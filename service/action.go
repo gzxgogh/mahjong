@@ -278,7 +278,7 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType strin
 	surplusCardArr := GetSurplusCard(roomNum)
 	length := len(surplusCardArr)
 	newCard := surplusCardArr[length-1]
-
+	fmt.Println("摸到的牌:", newCard.String())
 	caryTypeArr := cardInfo[newCard.Type]
 	caryTypeArr = append(caryTypeArr, newCard.Value)
 	sort.Ints(caryTypeArr)
@@ -297,7 +297,7 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType strin
 	key = fmt.Sprintf(`%d-%s`, roomNum, player)
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 	assistantCards(roomNum, player, "barType", cardGroup)
-
+	res.GardCard = &newCard
 	return utils.Success(res)
 }
 
