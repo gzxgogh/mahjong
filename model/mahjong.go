@@ -9,27 +9,42 @@ import (
 type CardType string
 
 const (
-	CardType_W = "万" //万
-	CardType_T = "筒" //筒
-	CardType_S = "条" //条
-	CardType_Z = "中" //中
-	CardType_G = "金" //金
+	CardTypeW = "万"
+	CardTypeT = "筒"
+	CardTypeS = "条"
+	CardTypeZ = "中"
+	CardTypeG = "金"
+)
 
+const (
+	WinHu          = "胡"
+	WinZiMo        = "自摸"
+	WinRobGold     = "抢金"
+	WinThreeGold   = "三金"
+	WinIdleGold    = "闲金"
+	WinGoldSparrow = "金雀"
+	WinGoldDragon  = "金龙"
+)
+
+const (
+	ActionEat   = "吃"
+	ActionTouch = "碰"
+	ActionBar   = "杠"
 )
 
 //实现string
 func (st CardType) String() string {
 	str := ""
 	switch st {
-	case CardType_W:
+	case CardTypeW:
 		str += "万"
-	case CardType_T:
+	case CardTypeT:
 		str += "筒"
-	case CardType_S:
+	case CardTypeS:
 		str += "条"
-	case CardType_Z:
+	case CardTypeZ:
 		str = "中"
-	case CardType_G:
+	case CardTypeG:
 		str = "金"
 	}
 	return str

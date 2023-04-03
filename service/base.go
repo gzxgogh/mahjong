@@ -91,11 +91,11 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 		kInfo := make(map[string][]int)
 		for _, item := range arr {
 			if item.String() == gold.String() {
-				kInfo[model.CardType_G] = append(kInfo[model.CardType_G], 1)
-			} else if item.Type != model.CardType_Z && item.String() != gold.String() {
+				kInfo[model.CardTypeG] = append(kInfo[model.CardTypeG], 1)
+			} else if item.Type != model.CardTypeZ && item.String() != gold.String() {
 				kInfo[item.Type] = append(kInfo[item.Type], item.Value)
 			} else {
-				kInfo[model.CardType_Z] = append(kInfo[model.CardType_Z], 1)
+				kInfo[model.CardTypeZ] = append(kInfo[model.CardTypeZ], 1)
 			}
 		}
 		for _, v := range kInfo {
@@ -146,13 +146,13 @@ func GetNextPlayer(curPlayer string) string {
 
 //抢金
 func robGold(cardInfo map[string][]int) bool {
-	cardInfo[model.CardType_G] = append(cardInfo[model.CardType_G], 1)
-	goldNum := len(cardInfo["金"])
+	cardInfo[model.CardTypeG] = append(cardInfo[model.CardTypeG], 1)
+	goldNum := len(model.CardTypeG)
 	pairNum := 0
 	isXianJin := false
 	pairCard := model.Card{}
 	for typ, arr := range cardInfo {
-		if typ == model.CardType_G {
+		if typ == model.CardTypeG {
 			continue
 		}
 		//1-9 每张牌的数量
@@ -378,12 +378,12 @@ func assistantCards(roomNum int, player, groupType string, cardGroup []model.Car
 
 //胡牌
 func huCard(curCard model.Card, cardInfo map[string][]int) bool {
-	goldNum := len(cardInfo["金"])
+	goldNum := len(model.CardTypeG)
 	pairNum := 0
 	isXianJin := false
 	pairCard := model.Card{}
 	for typ, arr := range cardInfo {
-		if typ == model.CardType_G {
+		if typ == model.CardTypeG {
 			continue
 		}
 		newArr := make([]int, len(arr))
@@ -407,12 +407,12 @@ func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 
 //自摸
 func ziMoCard(cardInfo map[string][]int, curCard model.Card) (bool, string) {
-	goldNum := len(cardInfo["金"])
+	goldNum := len(cardInfo[model.CardTypeG])
 	pairNum := 0
 	isXianJin := false
 	pairCard := model.Card{}
 	for typ, arr := range cardInfo {
-		if typ == model.CardType_G {
+		if typ == model.CardTypeG {
 			continue
 		}
 		//1-9 每张牌的数量
@@ -427,21 +427,21 @@ func ziMoCard(cardInfo map[string][]int, curCard model.Card) (bool, string) {
 			}
 		} else {
 			if goldNum == 3 {
-				return true, "三金"
+				return true, model.WinThreeGold
 			}
 			return false, ""
 		}
 	}
-	if goldNum == 2 {
-		return true, "金雀"
-	}
 	if goldNum == 3 {
-		return true, "金龙"
+		return true, model.WinGoldDragon
+	} else if goldNum == 2 {
+		return true, model.WinGoldSparrow
 	}
+
 	if isXianJin && curCard.String() == pairCard.String() {
-		return true, "游金"
+		return true, model.WinIdleGold
 	}
-	return true, "自摸"
+	return true, model.WinZiMo
 }
 
 /*

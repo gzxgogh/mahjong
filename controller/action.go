@@ -189,7 +189,7 @@ func (ac *action) GetAbandonCards(c *gin.Context) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
+// @Param	roomNum query int true "房间号"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/player/cards [get]
 func (ac *action) GetPlayerCards(c *gin.Context) model.Result {

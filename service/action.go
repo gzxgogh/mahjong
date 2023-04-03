@@ -25,7 +25,7 @@ func (ac *action) Dice() int64 {
 func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result {
 	redis.DelKey(fmt.Sprintf(`%d-assistantCards`, roomNum))
 	var totalCardsArr, finalCardsArr []model.Card
-	typeArr := []string{model.CardType_W, model.CardType_T, model.CardType_S}
+	typeArr := []string{model.CardTypeW, model.CardTypeT, model.CardTypeS}
 	for _, item := range typeArr {
 		for i := 0; i < 4; i++ {
 			for value := 1; value <= 9; value++ {
@@ -38,7 +38,7 @@ func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result
 	}
 	for i := 0; i < 4; i++ {
 		totalCardsArr = append(totalCardsArr, model.Card{
-			Type:  model.CardType_Z,
+			Type:  model.CardTypeZ,
 			Value: 1,
 		})
 	}
@@ -72,7 +72,7 @@ func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result
 		if robGold(cardInfo) {
 			res := model.Action{
 				Player: player,
-				Action: []string{"抢金"},
+				Action: []string{model.WinRobGold},
 			}
 			resList = append(resList, res)
 		}
@@ -95,7 +95,7 @@ func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
 	if gold.String() == curCard.String() {
 		curCard = model.Card{
-			Type:  model.CardType_G,
+			Type:  model.CardTypeG,
 			Value: 1,
 		}
 	}
@@ -115,7 +115,7 @@ func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	}
 	flag, cardGroup := darkBarCard(cardInfo)
 	if flag {
-		actionArr = append(actionArr, "barCard")
+		actionArr = append(actionArr, model.ActionBar)
 		result.BarCards = cardGroup
 	}
 
@@ -149,7 +149,7 @@ func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card)
 		var res model.Action
 		res.Player = curPlayer
 		if robGold(cardInfo) {
-			res.Action = []string{"robGold"}
+			res.Action = []string{model.WinRobGold}
 		}
 		resList = append(resList, res)
 	} else {
@@ -167,21 +167,20 @@ func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card)
 
 		var actionArr []string
 		if huCard(curCard, nextCardInfo) {
-			actionArr = append(actionArr, "huCard")
+			actionArr = append(actionArr, model.WinHu)
 		}
 		flag, cardGroup := rightBarCard(curCard, nextCardInfo)
 		if flag {
-			actionArr = append(actionArr, "barCard")
+			actionArr = append(actionArr, model.ActionBar)
 			res.BarCards = cardGroup
 		}
 		if touchCard(curCard, nextCardInfo) {
-			actionArr = append(actionArr, "touchCard")
+			actionArr = append(actionArr, model.ActionTouch)
 		}
 		if i == 0 {
-			fmt.Println("curCard", curCard, nextCardInfo)
 			flag, eatCards := eatCard(curCard, nextCardInfo)
 			if flag {
-				actionArr = append(actionArr, "eatCard")
+				actionArr = append(actionArr, model.ActionEat)
 				res.EatCards = eatCards
 			}
 		}
@@ -349,9 +348,10 @@ func (ac *action) GetAbandonCards(roomNum int) model.Result {
 
 //获取用户手牌
 func (ac *action) GetPlayerCards(roomNum int) model.Result {
-	value := redis.GetValue(fmt.Sprintf(`%d-assistantCards`, roomNum))
+	assistantStr := redis.GetValue(fmt.Sprintf(`%d-assistantCards`, roomNum))
 	assistantInfo := make(map[string]interface{})
-	utils.FromJSON(value, &assistantInfo)
+	utils.FromJSON(assistantStr, &assistantInfo)
+
 	result := make(map[string]interface{})
 	gold := GetGoldCard(roomNum)
 	for i := 1; i <= 4; i++ {
@@ -359,7 +359,7 @@ func (ac *action) GetPlayerCards(roomNum int) model.Result {
 		cardInfo := GetPlayerCardInfo(roomNum, player)
 		playerCard := make(map[string]interface{})
 		cardsArr := make([]map[string]interface{}, 0)
-		for j := 0; j < len(cardInfo[model.CardType_G]); j++ {
+		for j := 0; j < len(cardInfo[model.CardTypeG]); j++ {
 			cardsArr = append(cardsArr, map[string]interface{}{
 				"type":  gold.Type,
 				"value": gold.Value,
@@ -367,7 +367,7 @@ func (ac *action) GetPlayerCards(roomNum int) model.Result {
 			})
 		}
 		for typ, arr := range cardInfo {
-			if typ == model.CardType_G {
+			if typ == model.CardTypeG {
 				continue
 			}
 			for _, value := range arr {
