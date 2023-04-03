@@ -23,6 +23,7 @@ func (ac *action) Dice() int64 {
 
 //洗牌分牌
 func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result {
+	redis.DelKey(fmt.Sprintf(`%d-assistantCards`, roomNum))
 	var totalCardsArr, finalCardsArr []model.Card
 	typeArr := []string{model.CardType_W, model.CardType_T, model.CardType_S}
 	for _, item := range typeArr {
@@ -47,7 +48,7 @@ func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result
 		totalCardsArr = append(totalCardsArr[:randomNum], totalCardsArr[(randomNum+1):]...)
 	}
 
-	//确定是那个用户摇的骰子，并且更具点数开始抓牌
+	//确定是那个用户摇的骰子，并且根据点数开始抓牌
 	var startGroupNum, startNum int
 	switch player {
 	case "player1":
@@ -62,7 +63,21 @@ func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result
 	startNum = diceNum * 2
 
 	GrabTheCard(roomNum, startGroupNum, startNum, finalCardsArr)
-	return utils.Success(nil)
+
+	//判断能否抢金
+	var resList []model.Action
+	for i := 1; i <= 4; i++ {
+		player := fmt.Sprintf(`player%d`, i)
+		cardInfo := GetPlayerCardInfo(roomNum, player)
+		if robGold(cardInfo) {
+			res := model.Action{
+				Player: player,
+				Action: []string{"抢金"},
+			}
+			resList = append(resList, res)
+		}
+	}
+	return utils.Success(resList)
 }
 
 //获取该局的金
@@ -94,7 +109,7 @@ func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	result.Player = curPlayer
 	result.GardCard = &curCard
 	var actionArr []string
-	flag, actionStr := ziMoCard(cardInfo)
+	flag, actionStr := ziMoCard(cardInfo, curCard)
 	if flag {
 		actionArr = append(actionArr, actionStr)
 	}
@@ -178,7 +193,7 @@ func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card)
 }
 
 //吃牌
-func (ac *action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Card, player string) model.Result {
+func (ac *action) EatCard(roomNum int, player string, curCard model.Card, cardGroup []model.Card) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 
@@ -216,7 +231,7 @@ func (ac *action) EatCard(roomNum int, curCard model.Card, cardGroup []model.Car
 }
 
 //碰牌
-func (ac *action) TouchCard(roomNum int, curCard model.Card, player string) model.Result {
+func (ac *action) TouchCard(roomNum int, player string, curCard model.Card) model.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
@@ -245,7 +260,7 @@ func (ac *action) TouchCard(roomNum int, curCard model.Card, player string) mode
 }
 
 //明杠
-func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType string) model.Result {
+func (ac *action) BarCard(roomNum int, player, barType string, curCard model.Card) model.Result {
 
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
@@ -284,7 +299,7 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType strin
 	sort.Ints(caryTypeArr)
 	cardInfo[newCard.Type] = caryTypeArr
 
-	flag, actionStr := ziMoCard(cardInfo)
+	flag, actionStr := ziMoCard(cardInfo, newCard)
 	if flag {
 		res.Action = []string{actionStr}
 	}
@@ -302,7 +317,7 @@ func (ac *action) BarCard(roomNum int, curCard model.Card, player, barType strin
 }
 
 //记录弃牌
-func (ac *action) RecordAbandonCard(roomNum int, curCard model.Card, player string) model.Result {
+func (ac *action) RecordAbandonCard(roomNum int, player string, curCard model.Card) model.Result {
 	key := fmt.Sprintf("%d-abandonCards", roomNum)
 	value := redis.GetValue(key)
 	if value == "" {

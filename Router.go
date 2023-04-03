@@ -23,37 +23,47 @@ func setupRouter() *gin.Engine {
 	})
 
 	engine.GET("/mahjong/dice", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.Dice(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.Dice(c))
 	})
+
 	engine.POST("/mahjong/shuffle/cards", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.ShuffleCards(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.ShuffleCards(c))
 	})
+
 	engine.GET("/mahjong/gold/get", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.GetGoldCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.GetGoldCard(c))
 	})
+
 	engine.POST("/mahjong/grab/card", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.GrabOneCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.GrabOneCard(c))
 	})
+
 	engine.POST("/mahjong/play/card", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.PlayOneCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.PlayOneCard(c))
 	})
+
 	engine.POST("/mahjong/eat/card", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.EatCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.EatCard(c))
 	})
+
 	engine.POST("/mahjong/touch/card", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.TouchCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.TouchCard(c))
 	})
+
 	engine.POST("/mahjong/bar/card", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.BarCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.BarCard(c))
 	})
+
 	engine.POST("/mahjong/record/abandon/card", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.RecordAbandonCard(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.RecordAbandonCard(c))
 	})
+
 	engine.GET("/mahjong/abandon/cards", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.GetAbandonCards(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.GetAbandonCards(c))
 	})
+
 	engine.GET("/mahjong/player/cards", func(c *gin.Context) {
-		c.JSON(http.StatusOK, controller.Action.GetPlayerCards(GinParamMap(c)))
+		c.JSON(http.StatusOK, controller.Action.GetPlayerCards(c))
 	})
 
 	return engine

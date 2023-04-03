@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"mahjong/model"
 	"mahjong/service"
 	"mahjong/utils"
@@ -20,7 +20,7 @@ var Action action
 // @Produce json
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/dice [get]
-func (ac *action) Dice(params map[string]string) model.Result {
+func (ac *action) Dice(c *gin.Context) model.Result {
 	num := service.Action.Dice()
 	return utils.Success(num)
 }
@@ -31,22 +31,16 @@ func (ac *action) Dice(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	diceNum formData int true "点数"
-// @Param	player formData string true "当前的用户"
+// @Param	param body model.ShuffleCardsReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/shuffle/cards [post]
-func (ac *action) ShuffleCards(params map[string]string) model.Result {
-	fmt.Println("params", params)
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) ShuffleCards(c *gin.Context) model.Result {
+	var params model.ShuffleCardsReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	diceNum, err := strconv.Atoi(params["diceNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：diceNum")
-	}
-	return service.Action.ShuffleCards(roomNum, diceNum, params["player"])
+
+	return service.Action.ShuffleCards(params.RoomNum, params.DiceNum, params.Player)
 }
 
 // GetGoldCard	godoc
@@ -55,11 +49,11 @@ func (ac *action) ShuffleCards(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
+// @Param	roomNum query int true "房间号"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/gold/get [get]
-func (ac *action) GetGoldCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
+func (ac *action) GetGoldCard(c *gin.Context) model.Result {
+	roomNum, err := strconv.Atoi(c.Query("roomNum"))
 	if err != nil {
 		return utils.Error(-1, "无效的参数：roomNum")
 	}
@@ -72,19 +66,15 @@ func (ac *action) GetGoldCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	player formData string true "当前的用户"
+// @Param	param body model.GrabOneCardReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/grab/card [post]
-func (ac *action) GrabOneCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) GrabOneCard(c *gin.Context) model.Result {
+	var params model.GrabOneCardReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	if params["player"] == "" {
-		return utils.Error(-1, "无效的参数：player")
-	}
-	return service.Action.GrabOneCard(roomNum, params["player"])
+	return service.Action.GrabOneCard(params.RoomNum, params.Player)
 }
 
 // PlayOneCard	godoc
@@ -93,22 +83,15 @@ func (ac *action) GrabOneCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	player formData string true "当前的用户"
-// @Param	curCard formData string true "牌{'type':'万','value':5}"
+// @Param	param body model.PlayOneCardReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/play/card [post]
-func (ac *action) PlayOneCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) PlayOneCard(c *gin.Context) model.Result {
+	var params model.PlayOneCardReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	if params["player"] == "" {
-		return utils.Error(-1, "无效的参数：player")
-	}
-	var curdCard model.Card
-	utils.FromJSON(params["curCurd"], &curdCard)
-	return service.Action.PlayOneCard(roomNum, params["player"], curdCard)
+	return service.Action.PlayOneCard(params.RoomNum, params.Player, params.CurCard)
 }
 
 // EatCard	godoc
@@ -117,27 +100,16 @@ func (ac *action) PlayOneCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	player formData string true "当前的用户"
-// @Param	curCard formData string true "牌{'type':'万','value':5}"
-// @Param	cardGroup formData string true "牌[{'type':'万','value':5},{'type':'万','value':6}，{'type':'万','value':7}]"
+// @Param	param body model.EatCardReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/eat/card [post]
-func (ac *action) EatCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) EatCard(c *gin.Context) model.Result {
+	var params model.EatCardReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	if params["player"] == "" {
-		return utils.Error(-1, "无效的参数：player")
-	}
-	var curdCard model.Card
-	utils.FromJSON(params["curCurd"], &curdCard)
 
-	var cardGroup []model.Card
-	utils.FromJSON(params["cardGroup"], &cardGroup)
-
-	return service.Action.EatCard(roomNum, curdCard, cardGroup, params["player"])
+	return service.Action.EatCard(params.RoomNum, params.Player, params.CurCard, params.CardGroup)
 }
 
 // TouchCard	godoc
@@ -146,23 +118,16 @@ func (ac *action) EatCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	player formData string true "当前的用户"
-// @Param	curCard formData string true "牌{'type':'万','value':5}"
+// @Param	param body model.TouchCardReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/touch/card [post]
-func (ac *action) TouchCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) TouchCard(c *gin.Context) model.Result {
+	var params model.TouchCardReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	if params["player"] == "" {
-		return utils.Error(-1, "无效的参数：player")
-	}
-	var curCard model.Card
-	utils.FromJSON(params["curCard"], &curCard)
 
-	return service.Action.TouchCard(roomNum, curCard, params["player"])
+	return service.Action.TouchCard(params.RoomNum, params.Player, params.CurCard)
 }
 
 // BarCard	godoc
@@ -171,27 +136,16 @@ func (ac *action) TouchCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	player formData string true "当前的用户"
-// @Param	barType formData string true "rightBar/darkBar"
-// @Param	curCard formData string true "牌{'type':'万','value':5}"
+// @Param	param body model.BarCardReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/bar/card [post]
-func (ac *action) BarCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) BarCard(c *gin.Context) model.Result {
+	var params model.BarCardReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	if params["player"] == "" {
-		return utils.Error(-1, "无效的参数：player")
-	}
-	if params["barType"] != "rightBar" && params["barType"] != "darkBar" {
-		return utils.Error(-1, "无效的参数：barType")
-	}
-	var curCard model.Card
-	utils.FromJSON(params["curCard"], &curCard)
 
-	return service.Action.BarCard(roomNum, curCard, params["player"], params["barType"])
+	return service.Action.BarCard(params.RoomNum, params.Player, params.BarType, params.CurCard)
 }
 
 // RecordAbandonCard	godoc
@@ -200,23 +154,15 @@ func (ac *action) BarCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
-// @Param	player formData string true "当前的用户"
-// @Param	curCard formData string true "牌{'type':'万','value':5}"
+// @Param	param body model.PlayOneCardReq true "请求体"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/record/abandon/card [post]
-func (ac *action) RecordAbandonCard(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
-	if err != nil {
-		return utils.Error(-1, "无效的参数：roomNum")
+func (ac *action) RecordAbandonCard(c *gin.Context) model.Result {
+	var params model.PlayOneCardReq
+	if err := c.ShouldBindJSON(&params); err != nil {
+		return utils.Error(-1, "解析失败")
 	}
-	if params["player"] == "" {
-		return utils.Error(-1, "无效的参数：player")
-	}
-	var curdCard model.Card
-	utils.FromJSON(params["curCurd"], &curdCard)
-
-	return service.Action.RecordAbandonCard(roomNum, curdCard, params["player"])
+	return service.Action.RecordAbandonCard(params.RoomNum, params.Player, params.CurCard)
 }
 
 // GetAbandonCards	godoc
@@ -225,11 +171,11 @@ func (ac *action) RecordAbandonCard(params map[string]string) model.Result {
 // @Tags         麻将
 // @Accept	x-www-form-urlencoded
 // @Produce json
-// @Param	roomNum formData int true "房间号"
+// @Param	roomNum query int true "房间号"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/abandon/cards/get [get]
-func (ac *action) GetAbandonCards(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
+func (ac *action) GetAbandonCards(c *gin.Context) model.Result {
+	roomNum, err := strconv.Atoi(c.Query("roomNum"))
 	if err != nil {
 		return utils.Error(-1, "无效的参数：roomNum")
 	}
@@ -246,8 +192,8 @@ func (ac *action) GetAbandonCards(params map[string]string) model.Result {
 // @Param	roomNum formData int true "房间号"
 // @Success 200 {string} string	"ok"
 // @Router	/mahjong/player/cards [get]
-func (ac *action) GetPlayerCards(params map[string]string) model.Result {
-	roomNum, err := strconv.Atoi(params["roomNum"])
+func (ac *action) GetPlayerCards(c *gin.Context) model.Result {
+	roomNum, err := strconv.Atoi(c.Query("roomNum"))
 	if err != nil {
 		return utils.Error(-1, "无效的参数：roomNum")
 	}

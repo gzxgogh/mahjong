@@ -21,7 +21,7 @@ func InItRedisCoon() {
 
 func SetValue(key, value string, expiration time.Duration) {
 	DB.Del(key)
-	DB.Set(key, value, expiration)
+	DB.Set(key, value, 24*time.Hour)
 }
 
 func DelKey(key string) {

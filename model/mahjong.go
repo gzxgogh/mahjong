@@ -69,3 +69,44 @@ type Result struct {
 	Msg    string      `json:"msg" bson:"msg"`
 	Data   interface{} `json:"data" bson:"data"`
 }
+
+type ShuffleCardsReq struct {
+	RoomNum int    `json:"roomNum"`
+	DiceNum int    `json:"diceNum"`
+	Player  string `json:"player"`
+}
+
+type JudgeRobGoldReq struct {
+	RoomNum int `json:"roomNum"`
+}
+
+type GrabOneCardReq struct {
+	RoomNum int    `json:"roomNum"`
+	Player  string `json:"player"`
+}
+
+type PlayOneCardReq struct {
+	RoomNum int    `json:"roomNum"`
+	Player  string `json:"player"`
+	CurCard Card   `json:"curCard"`
+}
+
+type EatCardReq struct {
+	RoomNum   int    `json:"roomNum"`
+	Player    string `json:"player"`
+	CurCard   Card   `json:"curCard"`
+	CardGroup []Card `json:"cardGroup"`
+}
+
+type TouchCardReq struct {
+	RoomNum int    `json:"roomNum"`
+	Player  string `json:"player"`
+	CurCard Card   `json:"curCard"`
+}
+
+type BarCardReq struct {
+	RoomNum int    `json:"roomNum"`
+	Player  string `json:"player"`
+	BarType string `json:"barType"` //rightBar/darkBar
+	CurCard Card   `json:"curCard"`
+}
