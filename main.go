@@ -2,17 +2,32 @@ package main
 
 import (
 	"context"
+	"flag"
 	"github.com/gzxgogh/ggin"
-	"log"
+	"github.com/gzxgogh/ggin/logs"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
 
+func parseArgs() string {
+	var configFile string
+	flag.StringVar(&configFile, "f", os.Args[0]+".yml", "yml配置文件名")
+	flag.Parse()
+	path, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	if !strings.Contains(configFile, "/") {
+		configFile = path + "/" + configFile
+	}
+	return configFile
+}
+
 func main() {
-	ggin.Init("D:\\workSpace\\github\\mahjong\\config.yml")
+	cfgFile := parseArgs()
+	ggin.Init(cfgFile)
 
 	engine := setupRouter()
 	server := &http.Server{
@@ -24,7 +39,7 @@ func main() {
 		var err error
 		err = server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Println("HTTP server listen: {}", err.Error())
+			logs.Error("HTTP server listen: {}", err.Error())
 		}
 	}()
 
@@ -32,13 +47,13 @@ func main() {
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	sig := <-signalChan
-	log.Println("Get Signal:" + sig.String())
-	log.Println("Shutdown Server ...")
+	logs.Info("Get Signal:" + sig.String())
+	logs.Info("Shutdown Server ...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Println("Server Shutdown:" + err.Error())
+		logs.Error("Server Shutdown:" + err.Error())
 	}
-	log.Println("Server exiting")
+	logs.Info("Server exiting")
 }
