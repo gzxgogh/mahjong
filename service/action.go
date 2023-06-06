@@ -2,9 +2,10 @@ package service
 
 import (
 	"fmt"
+	"github.com/gzxgogh/ggin/models"
+	"github.com/gzxgogh/ggin/utils"
 	"mahjong/model"
 	"mahjong/redis"
-	"mahjong/utils"
 	"sort"
 	"time"
 )
@@ -13,7 +14,7 @@ type action struct{}
 
 var Action *action
 
-//摇骰子
+// 摇骰子
 func (ac *action) Dice() int64 {
 	a := utils.GetRandomWithAll(1, 6)
 	b := utils.GetRandomWithAll(1, 6)
@@ -21,8 +22,8 @@ func (ac *action) Dice() int64 {
 	return sum
 }
 
-//洗牌分牌
-func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result {
+// 洗牌分牌
+func (ac *action) ShuffleCards(roomNum, diceNum int, player string) models.Result {
 	redis.DelKey(fmt.Sprintf(`%d-assistantCards`, roomNum))
 	var totalCardsArr, finalCardsArr []model.Card
 	typeArr := []string{model.CardTypeW, model.CardTypeT, model.CardTypeS}
@@ -77,17 +78,17 @@ func (ac *action) ShuffleCards(roomNum, diceNum int, player string) model.Result
 			resList = append(resList, res)
 		}
 	}
-	return utils.Success(resList)
+	return models.Success(resList)
 }
 
-//获取该局的金
-func (ac *action) GetGoldCard(roomNum int) model.Result {
+// 获取该局的金
+func (ac *action) GetGoldCard(roomNum int) models.Result {
 	gold := GetGoldCard(roomNum)
-	return utils.Success(gold)
+	return models.Success(gold)
 }
 
-//抓一张牌
-func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
+// 抓一张牌
+func (ac *action) GrabOneCard(roomNum int, curPlayer string) models.Result {
 	surplusCard := GetSurplusCard(roomNum)
 	curCard := surplusCard[0]
 	gold := GetGoldCard(roomNum)
@@ -125,11 +126,11 @@ func (ac *action) GrabOneCard(roomNum int, curPlayer string) model.Result {
 	redis.SetValue(key, utils.ToJSON(surplusCard), time.Hour)
 	redis.SetValue(fmt.Sprintf("%d-%s", roomNum, curPlayer), utils.ToJSON(cardInfo), time.Hour)
 
-	return utils.Success(result)
+	return models.Success(result)
 }
 
-//出一张手牌
-func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) model.Result {
+// 出一张手牌
+func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card) models.Result {
 	key := fmt.Sprintf("%d-%s", roomNum, curPlayer)
 	cardInfo := GetPlayerCardInfo(roomNum, curPlayer)
 	curCardArr := cardInfo[curCard.Type]
@@ -188,11 +189,11 @@ func (ac *action) PlayOneCard(roomNum int, curPlayer string, curCard model.Card)
 		resList = append(resList, res)
 		curPlayer = nextPlayer
 	}
-	return utils.Success(resList)
+	return models.Success(resList)
 }
 
-//吃牌
-func (ac *action) EatCard(roomNum int, player string, curCard model.Card, cardGroup []model.Card) model.Result {
+// 吃牌
+func (ac *action) EatCard(roomNum int, player string, curCard model.Card, cardGroup []model.Card) models.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 
@@ -226,11 +227,11 @@ func (ac *action) EatCard(roomNum int, player string, curCard model.Card, cardGr
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 	assistantCards(roomNum, player, "eatCard", cardGroup)
 
-	return utils.Success(nil)
+	return models.Success(nil)
 }
 
-//碰牌
-func (ac *action) TouchCard(roomNum int, player string, curCard model.Card) model.Result {
+// 碰牌
+func (ac *action) TouchCard(roomNum int, player string, curCard model.Card) models.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
@@ -255,12 +256,11 @@ func (ac *action) TouchCard(roomNum int, player string, curCard model.Card) mode
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 	assistantCards(roomNum, player, "touchCard", cardGroup)
 
-	return utils.Success(nil)
+	return models.Success(nil)
 }
 
-//明杠
-func (ac *action) BarCard(roomNum int, player, barType string, curCard model.Card) model.Result {
-
+// 明杠
+func (ac *action) BarCard(roomNum int, player, barType string, curCard model.Card) models.Result {
 	cardInfo := GetPlayerCardInfo(roomNum, player)
 	arr := cardInfo[curCard.Type]
 	var newArr []int
@@ -281,7 +281,7 @@ func (ac *action) BarCard(roomNum int, player, barType string, curCard model.Car
 		newArr = append(newArr, value)
 	}
 	if total != 0 {
-		return utils.Error(-1, "无效的杠牌")
+		return models.Error(-1, "无效的杠牌")
 	}
 	cardInfo[curCard.Type] = newArr
 
@@ -312,11 +312,11 @@ func (ac *action) BarCard(roomNum int, player, barType string, curCard model.Car
 	redis.SetValue(key, utils.ToJSON(cardInfo), 1*time.Hour)
 	assistantCards(roomNum, player, "barType", cardGroup)
 	res.GardCard = &newCard
-	return utils.Success(res)
+	return models.Success(res)
 }
 
-//记录弃牌
-func (ac *action) RecordAbandonCard(roomNum int, player string, curCard model.Card) model.Result {
+// 记录弃牌
+func (ac *action) RecordAbandonCard(roomNum int, player string, curCard model.Card) models.Result {
 	key := fmt.Sprintf("%d-abandonCards", roomNum)
 	value := redis.GetValue(key)
 	if value == "" {
@@ -333,21 +333,21 @@ func (ac *action) RecordAbandonCard(roomNum int, player string, curCard model.Ca
 		}
 		redis.SetValue(key, utils.ToJSON(obj), time.Hour)
 	}
-	return utils.Success(nil)
+	return models.Success(nil)
 }
 
-//获取弃牌堆
-func (ac *action) GetAbandonCards(roomNum int) model.Result {
+// 获取弃牌堆
+func (ac *action) GetAbandonCards(roomNum int) models.Result {
 	key := fmt.Sprintf("%d-abandonCards", roomNum)
 	value := redis.GetValue(key)
 	obj := make(map[string][]model.Card)
 	utils.FromJSON(value, &obj)
 
-	return utils.Success(obj)
+	return models.Success(obj)
 }
 
-//获取用户手牌
-func (ac *action) GetPlayerCards(roomNum int) model.Result {
+// 获取用户手牌
+func (ac *action) GetPlayerCards(roomNum int) models.Result {
 	assistantStr := redis.GetValue(fmt.Sprintf(`%d-assistantCards`, roomNum))
 	assistantInfo := make(map[string]interface{})
 	utils.FromJSON(assistantStr, &assistantInfo)
@@ -381,5 +381,5 @@ func (ac *action) GetPlayerCards(roomNum int) model.Result {
 		playerCard["assistant"] = assistantInfo[player]
 		result[player] = playerCard
 	}
-	return utils.Success(result)
+	return models.Success(result)
 }

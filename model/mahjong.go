@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-//牌类型
+// 牌类型
 type CardType string
 
 const (
@@ -32,7 +32,7 @@ const (
 	ActionBar   = "杠"
 )
 
-//实现string
+// 实现string
 func (st CardType) String() string {
 	str := ""
 	switch st {
@@ -50,21 +50,21 @@ func (st CardType) String() string {
 	return str
 }
 
-//牌定义
+// 牌定义
 type Card struct {
 	Value int    `json:"value"`
 	Type  string `json:"type"`
 }
 
-//实现string
+// 实现string
 func (c *Card) String() string {
 	return fmt.Sprint("Card: ", c.Value, " ", c.Type)
 }
 
-//自定义排序
+// 自定义排序
 type SortCards []*Card
 
-//实现
+// 实现
 func (sc SortCards) Sort() {
 	sort.Slice(sc, func(i, j int) bool {
 		return sc[i].Value < sc[j].Value
@@ -77,12 +77,6 @@ type Action struct {
 	GardCard *Card    `json:"gardCard"`
 	EatCards [][]Card `json:"eatCards"`
 	BarCards [][]Card `json:"barCards"`
-}
-
-type Result struct {
-	Status int         `json:"status" bson:"status"`
-	Msg    string      `json:"msg" bson:"msg"`
-	Data   interface{} `json:"data" bson:"data"`
 }
 
 type ShuffleCardsReq struct {

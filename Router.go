@@ -3,11 +3,11 @@ package main
 import (
 	"github.com/ekyoung/gin-nice-recovery"
 	"github.com/gin-gonic/gin"
+	"github.com/gzxgogh/ggin/models"
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/gin-swagger/swaggerFiles"
 	"mahjong/controller"
 	_ "mahjong/docs"
-	"mahjong/utils"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ func setupRouter() *gin.Engine {
 	engine.Use(nice.Recovery(recoveryHandler))
 	//设置404返回的内容
 	engine.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusOK, utils.Error(404, "无效的路由"))
+		c.JSON(http.StatusOK, models.Error(404, "无效的路由"))
 	})
 
 	engine.GET("/mahjong/dice", func(c *gin.Context) {
@@ -67,25 +67,6 @@ func setupRouter() *gin.Engine {
 	})
 
 	return engine
-}
-
-func GinParamMap(c *gin.Context) map[string]string {
-	params := make(map[string]string)
-	if c.Request.Method == "GET" {
-		for k, v := range c.Request.URL.Query() {
-			params[k] = v[0]
-		}
-		return params
-	} else {
-		c.Request.ParseForm()
-		for k, v := range c.Request.PostForm {
-			params[k] = v[0]
-		}
-		for k, v := range c.Request.URL.Query() {
-			params[k] = v[0]
-		}
-		return params
-	}
 }
 
 func recoveryHandler(c *gin.Context, err interface{}) {

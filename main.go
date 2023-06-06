@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/gzxgogh/ggin"
 	"log"
-	"mahjong/redis"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,10 +12,9 @@ import (
 )
 
 func main() {
+	ggin.Init("D:\\workSpace\\github\\mahjong\\config.yml")
 
-	redis.InItRedisCoon()
 	engine := setupRouter()
-
 	server := &http.Server{
 		Addr:    ":8011",
 		Handler: engine,

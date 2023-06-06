@@ -2,14 +2,14 @@ package service
 
 import (
 	"fmt"
+	"github.com/gzxgogh/ggin/utils"
 	"mahjong/model"
 	"mahjong/redis"
-	"mahjong/utils"
 	"sort"
 	"time"
 )
 
-//获取从哪个用户开始抓牌
+// 获取从哪个用户开始抓牌
 func GetStartGroup(diceNum, player int) int {
 	if diceNum == 1 || diceNum == 5 || diceNum == 9 {
 		return player
@@ -41,7 +41,7 @@ func GetStartGroup(diceNum, player int) int {
 	return 0
 }
 
-//获取金
+// 获取金
 func GetGoldCard(roomNum int) model.Card {
 	value := redis.GetValue(fmt.Sprintf(`%d-gold`, roomNum))
 	var gold model.Card
@@ -49,7 +49,7 @@ func GetGoldCard(roomNum int) model.Card {
 	return gold
 }
 
-//抓牌并且分牌
+// 抓牌并且分牌
 func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card) {
 	var newCardsArr, surplusCardArr []model.Card
 	var grabTheCardArr []int
@@ -112,7 +112,7 @@ func GrabTheCard(roomNum, startGroupNum, startNum int, allCardsArr []model.Card)
 	redis.SetValue(fmt.Sprintf(`%d-surplusCard`, roomNum), utils.ToJSON(surplusCardArr), 1*time.Hour)
 }
 
-//获取剩余牌堆的牌
+// 获取剩余牌堆的牌
 func GetSurplusCard(roomNum int) []model.Card {
 	value := redis.GetValue(fmt.Sprintf(`%d-surplusCard`, roomNum))
 	var surplusCard []model.Card
@@ -120,7 +120,7 @@ func GetSurplusCard(roomNum int) []model.Card {
 	return surplusCard
 }
 
-//获取用户手牌
+// 获取用户手牌
 func GetPlayerCardInfo(roomNum int, player string) map[string][]int {
 	value := redis.GetValue(fmt.Sprintf(`%d-%s`, roomNum, player))
 	cardInfo := make(map[string][]int)
@@ -128,7 +128,7 @@ func GetPlayerCardInfo(roomNum int, player string) map[string][]int {
 	return cardInfo
 }
 
-//获取下家用户
+// 获取下家用户
 func GetNextPlayer(curPlayer string) string {
 	player := ""
 	switch curPlayer {
@@ -144,7 +144,7 @@ func GetNextPlayer(curPlayer string) string {
 	return player
 }
 
-//抢金
+// 抢金
 func robGold(cardInfo map[string][]int) bool {
 	cardInfo[model.CardTypeG] = append(cardInfo[model.CardTypeG], 1)
 	goldNum := len(model.CardTypeG)
@@ -168,7 +168,7 @@ func robGold(cardInfo map[string][]int) bool {
 	return true
 }
 
-//吃牌
+// 吃牌
 func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Card) {
 	var lessTwoCard, lessOneCard, greaterOneCard, greaterTwoCard int
 	flag := false
@@ -293,7 +293,7 @@ func eatCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Car
 	return flag, finalArr
 }
 
-//碰牌
+// 碰牌
 func touchCard(curCard model.Card, cardInfo map[string][]int) bool {
 	total := 0
 	for _, item := range cardInfo[curCard.Type] {
@@ -307,7 +307,7 @@ func touchCard(curCard model.Card, cardInfo map[string][]int) bool {
 	return false
 }
 
-//明杠
+// 明杠
 func rightBarCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]model.Card) {
 	total := 0
 	for _, item := range cardInfo[curCard.Type] {
@@ -329,7 +329,7 @@ func rightBarCard(curCard model.Card, cardInfo map[string][]int) (bool, [][]mode
 	return false, nil
 }
 
-//暗杠
+// 暗杠
 func darkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
 	var finalArr [][]model.Card
 	for typ, arr := range cardInfo {
@@ -353,7 +353,7 @@ func darkBarCard(cardInfo map[string][]int) (bool, [][]model.Card) {
 	return false, finalArr
 }
 
-//用户副手牌，即吃牌碰牌等。
+// 用户副手牌，即吃牌碰牌等。
 func assistantCards(roomNum int, player, groupType string, cardGroup []model.Card) {
 	key := fmt.Sprintf(`%d-assistantCards`, roomNum)
 	value := redis.GetValue(key)
@@ -376,7 +376,7 @@ func assistantCards(roomNum int, player, groupType string, cardGroup []model.Car
 	redis.SetValue(key, utils.ToJSON(info), time.Hour)
 }
 
-//胡牌
+// 胡牌
 func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 	goldNum := len(model.CardTypeG)
 	pairNum := 0
@@ -405,7 +405,7 @@ func huCard(curCard model.Card, cardInfo map[string][]int) bool {
 	return true
 }
 
-//自摸
+// 自摸
 func ziMoCard(cardInfo map[string][]int, curCard model.Card) (bool, string) {
 	goldNum := len(cardInfo[model.CardTypeG])
 	pairNum := 0
@@ -456,7 +456,7 @@ func ziMoCard(cardInfo map[string][]int, curCard model.Card) (bool, string) {
 	在回来到下面减一个345 剩33367，减去333 剩下67 ，这里和第一次其实是一样的算法，只是顺序不同。
 */
 
-//根据剩余的牌，和金来重新组合牌
+// 根据剩余的牌，和金来重新组合牌
 func computeCards(cardsNum []int, isXianJin *bool, pairNum, goldNum *int, pairCard *model.Card) bool {
 	cnt := 0
 	for _, num := range cardsNum {

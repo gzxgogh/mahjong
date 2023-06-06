@@ -1,0 +1,21 @@
+app:
+  name: "mahjong"
+  listen: "0.0.0.0:8011"
+
+logger:
+  path: logs
+  requestTableName:
+
+mysql:
+  conn: user:password@tcp(127.0.0.1:3306)/dbName?charset=utf8&parseTime=True&loc=Local
+  used: false
+mongo:
+  conn: mongodb://user:password@127.0.0.1:2717
+  db: dbName
+  used: false
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password:
+  db: 0
+  used: true
